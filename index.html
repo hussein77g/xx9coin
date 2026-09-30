@@ -122,6 +122,213 @@ html,body{background:#000;color:#fff;height:100vh;overflow:hidden;user-select:no
 .ts{position:fixed;top:100px;left:50%;transform:translate3d(-50%,-200px,0);background:rgba(28,28,30,.98);color:#fff;padding:13px 22px;border-radius:14px;font-weight:800;font-size:13px;z-index:10000;transition:transform .35s cubic-bezier(.68,-.55,.265,1.55);border:.5px solid rgba(255,255,255,.1);max-width:88%;text-align:center}
 .ts.sh{transform:translate3d(-50%,0,0)}
 </style>
+<style id="font-master">
+/* ═══════ APPLE SAN FRANCISCO FONTS ═══════ */
+@font-face {
+  font-family: 'SF Pro Display';
+  src: local('SF Pro Display'), local('-apple-system');
+  font-display: swap;
+}
+
+/* ═══════ GLOBAL TYPOGRAPHY ═══════ */
+* {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', 'Segoe UI', system-ui, sans-serif !important;
+  -webkit-font-smoothing: antialiased !important;
+  -moz-osx-font-smoothing: grayscale !important;
+  text-rendering: geometricPrecision !important;
+  font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1, 'ss01' 1, 'cv11' 1 !important;
+  font-variant-ligatures: common-ligatures contextual !important;
+}
+
+/* ═══════ BASE WEIGHT: BOLD + SHADOW ═══════ */
+body, div, span, p, a, button, input, textarea, label, li, td, th {
+  font-weight: 800 !important;
+  letter-spacing: -0.022em !important;
+  text-shadow: 
+    0 1px 0 rgba(0, 0, 0, 0.7),
+    0 2px 4px rgba(0, 0, 0, 0.45),
+    0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* ═══════ HEADINGS - ULTRA BOLD ═══════ */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 900 !important;
+  letter-spacing: -0.045em !important;
+  text-shadow: 
+    0 1px 0 rgba(0, 0, 0, 0.8),
+    0 3px 6px rgba(0, 0, 0, 0.5),
+    0 6px 14px rgba(0, 0, 0, 0.3);
+}
+
+/* ═══════ DISPLAY TEXT (Balance, Titles) ═══════ */
+.bal-val, .bal-val .num, .mtitle, .p-nm, .b-nm, .modal-ti, .phead .p-nm {
+  font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif !important;
+  font-weight: 900 !important;
+  letter-spacing: -0.055em !important;
+  line-height: 1.05 !important;
+  text-shadow: 
+    0 2px 0 rgba(0, 0, 0, 0.6),
+    0 6px 14px rgba(0, 0, 0, 0.5),
+    0 12px 28px rgba(0, 0, 0, 0.25);
+}
+
+/* ═══════ BALANCE NUMBER - GOLDEN GLOW ═══════ */
+.bal-val .num {
+  text-shadow: 
+    0 2px 0 rgba(120, 60, 0, 0.7),
+    0 4px 8px rgba(0, 0, 0, 0.5),
+    0 0 30px rgba(255, 214, 10, 0.55),
+    0 0 60px rgba(255, 149, 0, 0.35),
+    0 0 100px rgba(255, 149, 0, 0.2) !important;
+  filter: drop-shadow(0 0 20px rgba(255, 214, 10, 0.4)) !important;
+}
+
+/* ═══════ USER NAME ═══════ */
+.u-nm, .p-nm {
+  font-weight: 900 !important;
+  letter-spacing: -0.035em !important;
+  text-shadow: 
+    0 1px 0 rgba(0, 0, 0, 0.7),
+    0 2px 5px rgba(0, 0, 0, 0.5);
+}
+
+/* ═══════ SMALL LABELS (uppercase style) ═══════ */
+.bal-lbl, .u-sub, .msub, .wallet-info, .gift-ds, .p-us {
+  font-weight: 700 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase;
+  text-shadow: 
+    0 1px 0 rgba(0, 0, 0, 0.6),
+    0 1px 3px rgba(0, 0, 0, 0.4);
+}
+.bal-lbl, .u-sub {
+  font-size: 10px !important;
+}
+.u-sub, .gift-ds, .p-us {
+  text-transform: none;
+  letter-spacing: 0.02em !important;
+}
+
+/* ═══════ BUTTONS - STRONG ═══════ */
+.buy-big, .sell-big, .sup-big, .wallet-big, .gift-btn, .modal-btn, .ni, .play-big {
+  font-weight: 900 !important;
+  letter-spacing: -0.018em !important;
+  text-shadow: 
+    0 1px 0 rgba(0, 0, 0, 0.5),
+    0 2px 4px rgba(0, 0, 0, 0.35);
+}
+.buy-big, .sell-big, .wallet-big {
+  font-size: 15px !important;
+}
+
+/* ═══════ NAV ITEMS ═══════ */
+.ni {
+  font-weight: 800 !important;
+  letter-spacing: 0.02em !important;
+}
+.ni span:last-child {
+  font-weight: 900 !important;
+  letter-spacing: 0.03em !important;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+
+/* ═══════ GIFT CARDS ═══════ */
+.gift-nm {
+  font-weight: 900 !important;
+  letter-spacing: -0.03em !important;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}
+.gift-price {
+  font-weight: 900 !important;
+  letter-spacing: -0.02em !important;
+  text-shadow: 
+    0 1px 0 rgba(0, 40, 60, 0.8),
+    0 0 20px currentColor,
+    0 0 40px rgba(0, 212, 255, 0.3);
+}
+
+/* ═══════ PROFILE ROWS ═══════ */
+.p-row .lbl {
+  font-weight: 700 !important;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+.p-row .val {
+  font-weight: 900 !important;
+  font-family: 'SF Mono', 'SF Pro Display', monospace !important;
+  letter-spacing: -0.01em !important;
+  text-shadow: 
+    0 1px 0 rgba(0, 0, 0, 0.6),
+    0 0 15px rgba(255, 255, 255, 0.15);
+}
+
+/* ═══════ LEADERBOARD ═══════ */
+.lb-nm, .lb-rank, .pod-nm {
+  font-weight: 900 !important;
+  letter-spacing: -0.02em !important;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}
+.lb-score, .pod-score {
+  font-weight: 900 !important;
+  font-family: 'SF Pro Display', sans-serif !important;
+  letter-spacing: -0.02em !important;
+  text-shadow: 
+    0 1px 0 rgba(80, 40, 0, 0.6),
+    0 0 20px rgba(255, 214, 10, 0.5);
+}
+
+/* ═══════ TOAST ═══════ */
+.ts {
+  font-weight: 800 !important;
+  letter-spacing: -0.015em !important;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+}
+
+/* ═══════ MODAL ═══════ */
+.modal-ti {
+  font-weight: 900 !important;
+  letter-spacing: -0.04em !important;
+}
+.modal-sub {
+  font-weight: 700 !important;
+  letter-spacing: -0.005em !important;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+/* ═══════ FLOAT NUMBERS (+0.01) ═══════ */
+.float {
+  font-weight: 900 !important;
+  font-family: 'SF Pro Display', sans-serif !important;
+  letter-spacing: -0.03em !important;
+  text-shadow: 
+    0 1px 0 rgba(120, 60, 0, 0.8),
+    0 2px 8px rgba(0, 0, 0, 0.5),
+    0 0 20px rgba(255, 214, 10, 0.8),
+    0 0 40px rgba(255, 149, 0, 0.5) !important;
+}
+
+/* ═══════ PRICES ═══════ */
+.price-row, .price-row .ton, .price-row .pts {
+  font-weight: 900 !important;
+  letter-spacing: -0.015em !important;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+/* ═══════ IFRAME SAFE ═══════ */
+@supports (font: -apple-system-body) {
+  * { font-family: -apple-system, 'SF Pro Display', sans-serif !important; }
+}
+
+/* ═══════ RESPONSIVE TYPOGRAPHY ═══════ */
+@media (max-width: 380px) {
+  .bal-val { font-size: 44px !important; }
+  .mtitle { font-size: 24px !important; }
+  .p-nm { font-size: 19px !important; }
+}
+@media (min-width: 500px) {
+  .bal-val { font-size: 58px !important; }
+  .mtitle { font-size: 32px !important; }
+}
+</style>
 </head>
 <body>
 
@@ -197,21 +404,21 @@ html,body{background:#000;color:#fff;height:100vh;overflow:hidden;user-select:no
       <span id="walletBigTxt">اربط محفظتك أولاً</span>
     </button>
 
-    <button class="buy-big" onclick="buyWithTON(0.5, 'xx9 Package S')">
+    <button class="buy-big" onclick="buyWithTON(0.5, 10000)">
       <span class="em">💳</span>
-      <span>0.5 TON — حزمة صغيرة</span>
+      <span>0.5 TON مقابل 10,000 نقطة</span>
     </button>
-    <button class="buy-big" onclick="buyWithTON(1, 'xx9 Package M')">
+    <button class="buy-big" onclick="buyWithTON(1, 25000)">
       <span class="em">💳</span>
-      <span>1 TON — حزمة متوسطة</span>
+      <span>1 TON مقابل 25,000 نقطة</span>
     </button>
-    <button class="buy-big" onclick="buyWithTON(5, 'xx9 Package L')">
+    <button class="buy-big" onclick="buyWithTON(5, 150000)">
       <span class="em">💳</span>
-      <span>5 TON — حزمة كبيرة</span>
+      <span>5 TON مقابل 150,000 نقطة</span>
     </button>
-    <button class="buy-big" onclick="buyWithTON(10, 'xx9 Package XL')">
+    <button class="buy-big" onclick="buyWithTON(10, 400000)">
       <span class="em">💳</span>
-      <span>10 TON — حزمة عملاقة</span>
+      <span>10 TON مقابل 400,000 نقطة</span>
     </button>
 
     <button class="sell-big" onclick="openDev('💱 أريد بيع نقاطي\n📊 رصيدي: ' + getBalText())">
@@ -512,7 +719,7 @@ function connectWallet() {
 // ═══════════════════════════════════════
 //   BUY WITH TON
 // ═══════════════════════════════════════
-async function buyWithTON(amountTON, itemName) {
+async function buyWithTON(amountTON, xx9Amount) {
   if (!tonConnectUI || !st.wallet) {
     tost('🔗 اربط محفظتك أولاً');
     connectWallet();
@@ -522,24 +729,38 @@ async function buyWithTON(amountTON, itemName) {
     var amountNano = Math.floor(amountTON * 1e9).toString();
     var tx = {
       validUntil: Math.floor(Date.now() / 1000) + 600,
-      messages: [
-        {
-          address: RECEIVER_ADDRESS,
-          amount: amountNano
-        }
-      ]
+      messages: [{ address: RECEIVER_ADDRESS, amount: amountNano }]
     };
     var result = await tonConnectUI.sendTransaction(tx);
-    // Success
+
+    // ✅ إضافة xx9 للحساب
+    st.balance += xx9Amount;
+    upd();
+    saveLater();
+
+    // إرسال للبوت
+    if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) {
+      try {
+        await fetch(API_URL + '/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            initData: window.Telegram.WebApp.initData,
+            balance: st.balance,
+            taps: st.taps,
+            wallet: st.wallet || ''
+          })
+        });
+      } catch(e){}
+    }
+
+    playSound('success');
+
     document.getElementById('mEm').textContent = '✅';
-    document.getElementById('mTi').textContent = 'تم الدفع بنجاح!';
-    document.getElementById('mSub').textContent = 'المبلغ: ' + amountTON + ' TON\n\nراسل @r2r_rr لاستلام ' + itemName;
+    document.getElementById('mTi').textContent = 'تم الشراء بنجاح!';
+    document.getElementById('mSub').textContent = 'دفعت: ' + amountTON + ' TON\nحصلت على: ' + xx9Amount.toLocaleString() + ' xx9\n\nرصيدك الجديد: ' + st.balance.toFixed(2) + ' xx9';
     document.getElementById('modal').classList.add('on');
     if (navigator.vibrate) navigator.vibrate([50, 100, 50]);
-    // Open dev chat
-    setTimeout(function(){
-      openDev('✅ دفعت ' + amountTON + ' TON لـ ' + itemName + '\n📊 رصيدي: ' + getBalText() + '\n🔗 محفظتي: ' + st.wallet);
-    }, 1800);
   } catch(e) {
     if (e && e.message && e.message.includes('cancel')) {
       tost('❌ ألغيت العملية');
@@ -660,16 +881,18 @@ for (var n = 0; n < navBtns.length; n++) {
 //   MARKET
 // ═══════════════════════════════════════
 var GIFTS = [
-  { em:'🌹', name:'وردة',      desc:'هدية رومانسية', ton: 0.1 },
-  { em:'❤️', name:'قلب أحمر', desc:'عبّر عن حبك',    ton: 0.5 },
-  { em:'🎂', name:'كيكة',      desc:'احتفل بيوم ميلاد', ton: 1 },
-  { em:'⭐', name:'نجمة',     desc:'أرسلها لصديق',   ton: 2 },
-  { em:'🚀', name:'صاروخ',    desc:'للمتفوقين',      ton: 5 },
-  { em:'👑', name:'تاج',       desc:'للملوك فقط',     ton: 10 },
-  { em:'💎', name:'ألماسة',   desc:'هدية فاخرة',     ton: 25 },
-  { em:'🏆', name:'كأس',      desc:'للأبطال',        ton: 50 },
-  { em:'🎁', name:'صندوق',    desc:'محتوى مفاجئ',    ton: 100 },
-  { em:'🧸', name:'دبدوب',    desc:'هدية لطيفة',     ton: 250 }
+  { em:'💝', name:'قلب مع شريط', desc:'هدية رومانسية', ton: 0.2 },
+  { em:'🧸', name:'دبدوب', desc:'صديق لطيف', ton: 0.2 },
+  { em:'🎁', name:'هدية', desc:'هدية مغلفة', ton: 0.3 },
+  { em:'🌹', name:'وردة', desc:'وردة حمراء', ton: 0.3 },
+  { em:'🎂', name:'كيكة', desc:'كيك عيد ميلاد', ton: 0.5 },
+  { em:'💐', name:'باقة ورد', desc:'باقة ملونة', ton: 0.5 },
+  { em:'🚀', name:'صاروخ', desc:'صاروخ سريع', ton: 0.5 },
+  { em:'🍾', name:'قنينة', desc:'قنينة احتفال', ton: 0.5 },
+  { em:'🏆', name:'كأس', desc:'كأس ذهبي', ton: 1.0 },
+  { em:'💍', name:'خاتم', desc:'خاتم ألماس', ton: 1.0 },
+  { em:'💎', name:'ألماسة', desc:'جوهرة نادرة', ton: 1.0 },
+  { em:'🕯', name:'هدية عشوائية', desc:'مفاجأة أسطورية!', ton: 5.0 }
 ];
 var marketRendered = false;
 
