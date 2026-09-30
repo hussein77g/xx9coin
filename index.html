@@ -340,6 +340,7 @@ h1, h2, h3, h4, h5, h6 {
       <div class="u-nm" id="uNm">Player</div>
       <div class="u-sub" id="uSub">Tap to earn</div>
     </div>
+    <button class="icon-btn" id="soundBtn" onclick="toggleSound()" style="width:38px">🔊</button>
     <button class="wallet-chip" id="walletChip" onclick="connectWallet()">
       <span class="dot off"></span>
       <span id="walletChipTxt">ربط</span>
@@ -464,7 +465,12 @@ h1, h2, h3, h4, h5, h6 {
       <span class="em">🔗</span>
       <span id="walletProfTxt">اربط محفظتك</span>
     </button>
-    <button class="buy-big" onclick="openDev('💳 أريد شراء xx9\n📊 رصيدي: ' + getBalText())">
+    
+    <button class="wallet-big" style="background:linear-gradient(135deg,#BF5AF2,#8B5CF6);box-shadow:0 10px 30px rgba(191,90,242,.4)" onclick="openReferral()">
+      <span class="em">👥</span>
+      <span>دعوة أصدقاء — +5 xx9 لكل صديق</span>
+    </button>
+<button class="buy-big" onclick="openDev('💳 أريد شراء xx9\n📊 رصيدي: ' + getBalText())">
       <span class="em">💳</span>
       <span>شراء نقاط</span>
     </button>
@@ -552,11 +558,90 @@ if (tgUser.photo_url) {
 // ═══════════════════════════════════════
 //   STATE
 // ═══════════════════════════════════════
+// ═══════ SOUND SYSTEM (Web Audio) ═══════
+var audioCtx = null;
+
+function initAudio() {
+  if (!audioCtx) {
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+  }
+}
+
+function playSound(type) {
+  if (!st.sound) return;
+  initAudio();
+  if (!audioCtx) return;
+  try {
+    var now = audioCtx.currentTime;
+    if (type === 'tap') {
+      var o = audioCtx.createOscillator();
+      var g = audioCtx.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(880, now);
+      o.frequency.exponentialRampToValueAtTime(1200, now + 0.06);
+      g.gain.setValueAtTime(0.08, now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(now); o.stop(now + 0.1);
+    } else if (type === 'success') {
+      [523.25, 659.25, 783.99].forEach(function(f, i) {
+        var o = audioCtx.createOscillator();
+        var g = audioCtx.createGain();
+        o.type = 'sine';
+        o.frequency.value = f;
+        g.gain.setValueAtTime(0, now + i * 0.1);
+        g.gain.linearRampToValueAtTime(0.15, now + i * 0.1 + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.1 + 0.3);
+        o.connect(g); g.connect(audioCtx.destination);
+        o.start(now + i * 0.1); o.stop(now + i * 0.1 + 0.3);
+      });
+    } else if (type === 'error') {
+      var o = audioCtx.createOscillator();
+      var g = audioCtx.createGain();
+      o.type = 'square';
+      o.frequency.setValueAtTime(300, now);
+      o.frequency.exponentialRampToValueAtTime(150, now + 0.2);
+      g.gain.setValueAtTime(0.1, now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(now); o.stop(now + 0.2);
+    } else if (type === 'coin') {
+      var o = audioCtx.createOscillator();
+      var g = audioCtx.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(1200, now);
+      o.frequency.exponentialRampToValueAtTime(1800, now + 0.1);
+      g.gain.setValueAtTime(0.1, now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(now); o.stop(now + 0.15);
+    }
+  } catch(e) {}
+}
+
+function toggleSound() {
+  st.sound = !st.sound;
+  localStorage.setItem('xx_sound', st.sound ? 'on' : 'off');
+  updateSoundBtn();
+  if (st.sound) {
+    playSound('success');
+    tost('🔊 الصوت مفعّل');
+  } else {
+    tost('🔇 الصوت مكتوم');
+  }
+}
+
+function updateSoundBtn() {
+  var btn = document.getElementById('soundBtn');
+  if (btn) btn.textContent = st.sound ? '🔊' : '🔇';
+}
+
 var st = {
   balance: parseFloat(localStorage.getItem('xx_bal') || '0'),
   taps: parseInt(localStorage.getItem('xx_taps') || '0'),
   wallet: localStorage.getItem('xx_wallet') || '',
-  walletShort: localStorage.getItem('xx_wallet_short') || ''
+  walletShort: localStorage.getItem('xx_wallet_short') || '',
+  sound: localStorage.getItem('xx_sound') !== 'off'
 };
 
 var saveTimer = null;
@@ -835,6 +920,7 @@ function tap(clientX, clientY) {
   }
 
   if (navigator.vibrate) navigator.vibrate(3);
+  playSound('tap');
   upd();
 }
 
@@ -932,6 +1018,7 @@ function buyGift(g) {
   document.getElementById('mTi').textContent = g.name + ' — ' + g.ton + ' TON';
   document.getElementById('mSub').textContent = 'سيتم فتح محفظتك للدفع';
   document.getElementById('modal').classList.add('on');
+  playSound('coin');
   if (navigator.vibrate) navigator.vibrate([15, 30, 15]);
   setTimeout(function(){
     closeModal();
@@ -979,6 +1066,10 @@ upd();
 updateWalletUI();
 
 // Init TON Connect after page load
+
+// ═══════ INIT SOUND ═══════
+setTimeout(updateSoundBtn, 200);
+
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', function(){
     setTimeout(initTonConnect, 500);
@@ -988,7 +1079,94 @@ if (document.readyState === 'loading') {
 }
 
 // Prevent double-tap zoom
+
+// ═══════ REFERRAL ═══════
+function openReferral() {
+  var uid = tgUser.id || 0;
+  var link = 'https://t.me/xx9coin_bot?start=' + uid;
+  document.getElementById('refLinkText').textContent = link;
+  document.getElementById('refCount').textContent = '...';
+  document.getElementById('refEarn').textContent = '...';
+  document.getElementById('refModal').classList.add('on');
+  if (navigator.vibrate) navigator.vibrate(8);
+
+  // Fetch from server
+  fetchRefStats();
+}
+
+async function fetchRefStats() {
+  if (!window.Telegram || !window.Telegram.WebApp || !window.Telegram.WebApp.initData) {
+    document.getElementById('refCount').textContent = '0';
+    document.getElementById('refEarn').textContent = '0';
+    return;
+  }
+  try {
+    var res = await fetch(API_URL + '/me', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ initData: window.Telegram.WebApp.initData })
+    });
+    if (!res.ok) throw new Error('fail');
+    var data = await res.json();
+    document.getElementById('refCount').textContent = (data.referrals || 0);
+    document.getElementById('refEarn').textContent = ((data.referrals || 0) * 5) + ' xx9';
+  } catch(e) {
+    document.getElementById('refCount').textContent = '0';
+    document.getElementById('refEarn').textContent = '0';
+  }
+}
+
+function copyRefLink() {
+  var uid = tgUser.id || 0;
+  var link = 'https://t.me/xx9coin_bot?start=' + uid;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(link).then(function(){
+      tost('📋 تم نسخ الرابط!');
+      playSound('success');
+    });
+  } else {
+    var ta = document.createElement('textarea');
+    ta.value = link;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    ta.remove();
+    tost('📋 تم نسخ الرابط!');
+  }
+}
+
+function closeRefModal() {
+  document.getElementById('refModal').classList.remove('on');
+}
+
+
+// ═══════ INIT SOUND BUTTON ═══════
+setTimeout(updateSoundBtn, 300);
+
 document.addEventListener('gesturestart', function(e){ e.preventDefault(); });
 </script>
+
+<div class="modal" id="refModal">
+  <div class="modal-em">👥</div>
+  <div class="modal-ti">دعوة أصدقاء</div>
+  <div class="modal-sub">ادعُ أصدقاءك واربح xx9 لكل صديق ينضم</div>
+  <div style="background:var(--bg-card-2);border-radius:14px;padding:14px;width:100%;max-width:340px;margin-bottom:14px;border:1px solid var(--border)">
+    <div style="font-size:11px;color:var(--txt-dim);font-weight:800;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">رابطك الشخصي</div>
+    <div id="refLinkText" style="font-size:11px;color:var(--blue);word-break:break-all;direction:ltr;text-align:center;font-family:'SF Mono',monospace;font-weight:700;line-height:1.6">...</div>
+  </div>
+  <button class="modal-btn" style="background:linear-gradient(135deg,#BF5AF2,#8B5CF6)" onclick="copyRefLink()">📋 نسخ الرابط</button>
+  <button class="modal-btn" style="margin-top:8px;background:transparent;border:1px solid var(--border-2);color:var(--txt-dim);box-shadow:none" onclick="closeRefModal()">إغلاق</button>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;max-width:340px;margin-top:16px">
+    <div style="background:var(--bg-card-2);border-radius:14px;padding:14px;text-align:center;border:1px solid var(--border)">
+      <div style="font-size:10px;color:var(--txt-dim);font-weight:800;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">الأصدقاء</div>
+      <div id="refCount" style="font-size:24px;font-weight:900;color:var(--purple)">0</div>
+    </div>
+    <div style="background:var(--bg-card-2);border-radius:14px;padding:14px;text-align:center;border:1px solid var(--border)">
+      <div style="font-size:10px;color:var(--txt-dim);font-weight:800;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">الربح</div>
+      <div id="refEarn" style="font-size:24px;font-weight:900;color:var(--gold)">0</div>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
