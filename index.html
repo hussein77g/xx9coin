@@ -987,6 +987,7 @@ function go(h) {
     navBtns[i].classList.toggle('on', navBtns[i].dataset.h === h);
   }
   if (h === 'market' && !marketRendered) renderMarket();
+  if (h === 'lead' && typeof loadLeaderboard === 'function') loadLeaderboard();
   if (typeof updateWalletUI === 'function') updateWalletUI();
   if (typeof checkAdmin === 'function') checkAdmin();
   if (navigator.vibrate) navigator.vibrate(5);
@@ -1383,6 +1384,77 @@ document.addEventListener('visibilitychange', function() {
 // Ensure screens initialized
 setTimeout(initScreens, 100);
 setTimeout(initScreens, 500);
+
+// ═══════ LEADERBOARD LOADER ═══════
+async function loadLeaderboard() {
+  var list = document.getElementById('lbList');
+  if (!list) return;
+  list.innerHTML = '<div style="text-align:center;padding:40px;color:#7a7a82;font-weight:800">جاري التحميل...</div>';
+
+  var apiUrl = (typeof API_URL !== 'undefined') ? API_URL : '';
+
+  if (!apiUrl) {
+    list.innerHTML = '<div style="text-align:center;padding:40px;color:#ff453a;font-weight:800">⚠️ لا يوجد اتصال</div>';
+    return;
+  }
+
+  var timeoutPromise = new Promise(function(resolve) {
+    setTimeout(function() { resolve({ __timeout: true }); }, 3000);
+  });
+
+  try {
+    var fetchPromise = fetch(apiUrl + '/leaderboard', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ initData: '' })
+    }).then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    }).catch(function(err) {
+      return { __error: err.message || 'network' };
+    });
+
+    var result = await Promise.race([fetchPromise, timeoutPromise]);
+
+    if (result.__timeout) throw new Error('timeout');
+    if (result.__error) throw new Error(result.__error);
+
+    var users = result.users || [];
+
+    if (users.length === 0) {
+      list.innerHTML = '<div style="text-align:center;padding:40px;color:#7a7a82;font-weight:800">لا يوجد لاعبون بعد</div>';
+      return;
+    }
+
+    var html = '';
+    for (var i = 0; i < users.length; i++) {
+      var u = users[i];
+      var rankCls = '';
+      var rankTxt = '#' + (i + 1);
+      if (i === 0) { rankCls = 'g1'; rankTxt = '1'; }
+      else if (i === 1) { rankCls = 'g2'; rankTxt = '2'; }
+      else if (i === 2) { rankCls = 'g3'; rankTxt = '3'; }
+      var isMe = (tgUser && u.user_id === tgUser.id);
+      var rowCls = 'lb-row' + (isMe ? ' me' : '');
+      var initial = u.first_name ? u.first_name[0] : '?';
+      html += '<div class="' + rowCls + '">' +
+        '<div class="lb-rank ' + rankCls + '">' + rankTxt + '</div>' +
+        '<div class="lb-av">' + initial + '</div>' +
+        '<div class="lb-info">' +
+        '<div class="lb-nm">' + (u.first_name || 'Player') + '</div>' +
+        '<div class="lb-sub">@' + (u.username || 'player') + '</div>' +
+        '</div>' +
+        '<div class="lb-score">' + (u.balance || 0).toFixed(2) + '<span class="c">xx9</span></div>' +
+        '</div>';
+    }
+    list.innerHTML = html;
+  } catch(e) {
+    var errMsg = e.message === 'timeout' ? 'انتهت المهلة' : ('خطأ: ' + e.message);
+    list.innerHTML = '<div style="text-align:center;padding:40px;color:#ff453a;font-weight:800">⚠️ ' + errMsg + '</div>' +
+      '<div style="text-align:center;margin-top:20px"><button onclick="loadLeaderboard()" style="background:linear-gradient(135deg,#FFD60A,#FF9500);border:none;border-radius:12px;padding:12px 24px;font-weight:900;font-size:14px;cursor:pointer">🔄 حاول مجدداً</button></div>';
+  }
+}
+
 document.addEventListener('gesturestart', function(e){ e.preventDefault(); });
 </script>
 
