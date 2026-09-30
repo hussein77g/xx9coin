@@ -423,9 +423,9 @@ h1, h2, h3, h4, h5, h6 {
       <span>10 TON مقابل 400,000 نقطة</span>
     </button>
 
-    <button class="sell-big" onclick="openDev('💱 أريد بيع نقاطي\n📊 رصيدي: ' + getBalText())">
+    <button class="sell-big" onclick="openDev('💱 أريد بيع عملاتي\n📊 رصيدي: ' + getBalText())">
       <span class="em">💰</span>
-      <span>بيع نقاطي مقابل TON</span>
+      <span>بيع عملاتي مقابل TON</span>
     </button>
 
     <button class="sup-big" onclick="openDev('❓ استفسار — رصيدي: ' + getBalText())">
@@ -473,11 +473,11 @@ h1, h2, h3, h4, h5, h6 {
     </button>
 <button class="buy-big" onclick="openDev('💳 أريد شراء xx9\n📊 رصيدي: ' + getBalText())">
       <span class="em">💳</span>
-      <span>شراء نقاط</span>
+      <span>شراء عملات</span>
     </button>
-    <button class="sell-big" onclick="openDev('💱 أريد بيع نقاطي\n📊 رصيدي: ' + getBalText())">
+    <button class="sell-big" onclick="openDev('💱 أريد بيع عملاتي\n📊 رصيدي: ' + getBalText())">
       <span class="em">💰</span>
-      <span>بيع نقاطي</span>
+      <span>بيع عملاتي</span>
     </button>
   </div>
   <nav class="nav">
@@ -1399,13 +1399,13 @@ document.addEventListener('gesturestart', function(e){ e.preventDefault(); });
     <!-- Stats -->
     <div class="p-card" id="adminStats">
       <div class="p-row"><span class="lbl">👥 المستخدمون</span><span class="val" id="admUsers">...</span></div>
-      <div class="p-row"><span class="lbl">💰 إجمالي النقاط</span><span class="val" id="admBalance">...</span></div>
+      <div class="p-row"><span class="lbl">💰 إجمالي العملات</span><span class="val" id="admBalance">...</span></div>
       <div class="p-row"><span class="lbl">🔗 الإحالات</span><span class="val" id="admRefs">...</span></div>
     </div>
 
     <!-- Give xx9 -->
     <div class="p-card">
-      <div style="font-size:14px;font-weight:900;margin-bottom:12px">💰 إعطاء نقاط</div>
+      <div style="font-size:14px;font-weight:900;margin-bottom:12px">💰 إعطاء عملات</div>
       <input type="number" id="admUserId" placeholder="User ID" style="width:100%;padding:12px;background:#000;border:1px solid var(--border-2);border-radius:12px;color:#fff;font-family:inherit;font-size:14px;font-weight:700;margin-bottom:8px;direction:ltr;text-align:left">
       <input type="number" id="admAmount" placeholder="المبلغ (xx9)" style="width:100%;padding:12px;background:#000;border:1px solid var(--border-2);border-radius:12px;color:#fff;font-family:inherit;font-size:14px;font-weight:700;margin-bottom:10px;direction:ltr;text-align:left">
       <button class="buy-big" onclick="adminGive()">
