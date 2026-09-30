@@ -947,7 +947,7 @@ var screens = {
   home: document.getElementById('scrHome'),
   market: document.getElementById('scrMarket'),
   trade: document.getElementById('scrTrade'),
-  lead: document.getElementById('scrLead') || null,
+  lead: document.getElementById('scrLead'),
   profile: document.getElementById('scrProfile'),
   admin: document.getElementById('scrAdmin')
 };
@@ -1441,6 +1441,31 @@ document.addEventListener('gesturestart', function(e){ e.preventDefault(); });
     <button class="ni" data-h="market"><span class="ic">🎁</span><span>Market</span></button>
     <button class="ni" data-h="trade"><span class="ic">💱</span><span>Trade</span></button>
     <button class="ni" data-h="lead"><span class="ic">🏆</span><span>Top</span></button>
+    <button class="ni" data-h="profile"><span class="ic">👤</span><span>Me</span></button>
+  </nav>
+</div>
+
+
+<div class="scr sub" id="scrLead">
+  <div class="top">
+    <div class="icon-btn" onclick="go('home')">←</div>
+    <div class="u-info">
+      <div class="u-nm">🏆 المتصدرون</div>
+      <div class="u-sub">TOP 100 PLAYERS</div>
+    </div>
+  </div>
+  <div class="mhead">
+    <div class="mtitle">🏆 المتصدرون</div>
+    <div class="msub">تنافس مع أفضل اللاعبين</div>
+  </div>
+  <div class="lead" id="lbList" style="padding:0 16px 130px;flex:1;overflow-y:auto">
+    <div style="text-align:center;padding:40px;color:#7a7a82;font-weight:800">جاري التحميل...</div>
+  </div>
+  <nav class="nav">
+    <button class="ni" data-h="home"><span class="ic">🪙</span><span>Tap</span></button>
+    <button class="ni" data-h="market"><span class="ic">🎁</span><span>Market</span></button>
+    <button class="ni" data-h="trade"><span class="ic">💱</span><span>Trade</span></button>
+    <button class="ni on" data-h="lead"><span class="ic">🏆</span><span>Top</span></button>
     <button class="ni" data-h="profile"><span class="ic">👤</span><span>Me</span></button>
   </nav>
 </div>
