@@ -506,6 +506,7 @@ var DEV = 'r2r_rr';
 var PER_TAP = 0.01;
 var RECEIVER_ADDRESS = 'UQD-fCzstgdlLEtLxwVG2jYZbDvvUupZYP6af6QZz1-LXwfl';
 var MANIFEST_URL = 'https://xx9coin.vercel.app/tonconnect-manifest.json';
+var API_URL='https://dynamic-dawn-area-insulin.trycloudflare.com';
 
 // ═══════════════════════════════════════
 //   TELEGRAM
@@ -1283,6 +1284,7 @@ async function pullFromServer() {
       st.balance = data.balance;
       upd();
     }
+    if (data.wallet && !st.wallet) {
       st.wallet = data.wallet;
       st.walletShort = data.wallet.slice(0,4) + '...' + data.wallet.slice(-4);
       updateWalletUI();
@@ -1337,6 +1339,7 @@ async function pullFromServer() {
       st.balance = data.balance;
       upd();
     }
+    if (data.wallet && !st.wallet) {
       st.wallet = data.wallet;
       st.walletShort = data.wallet.slice(0,4) + '...' + data.wallet.slice(-4);
       updateWalletUI();
