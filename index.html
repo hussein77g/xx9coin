@@ -340,6 +340,7 @@ h1, h2, h3, h4, h5, h6 {
       <div class="u-nm" id="uNm">Player</div>
       <div class="u-sub" id="uSub">Tap to earn</div>
     </div>
+    <button class="icon-btn" id="adminBtn" onclick="openAdmin()" style="display:none;width:38px;background:linear-gradient(135deg,#FFD60A,#FF9500);color:#000">👑</button>
     <button class="icon-btn" id="soundBtn" onclick="toggleSound()" style="width:38px">🔊</button>
     <button class="wallet-chip" id="walletChip" onclick="connectWallet()">
       <span class="dot off"></span>
@@ -920,6 +921,8 @@ function tap(clientX, clientY) {
   }
 
   if (navigator.vibrate) navigator.vibrate(3);
+  scheduleSync();
+  scheduleSync();
   playSound('tap');
   upd();
 }
@@ -943,18 +946,23 @@ var screens = {
   home: document.getElementById('scrHome'),
   market: document.getElementById('scrMarket'),
   trade: document.getElementById('scrTrade'),
-  profile: document.getElementById('scrProfile')
+  lead: document.getElementById('scrLead') || null,
+  profile: document.getElementById('scrProfile'),
+  admin: document.getElementById('scrAdmin')
 };
 var navBtns = document.querySelectorAll('.ni');
 
 function go(h) {
-  for (var k in screens) screens[k].classList.remove('on');
-  screens[h].classList.add('on');
+  for (var k in screens) {
+    if (screens[k]) screens[k].classList.remove('on');
+  }
+  if (screens[h]) screens[h].classList.add('on');
   for (var i = 0; i < navBtns.length; i++) {
     navBtns[i].classList.toggle('on', navBtns[i].dataset.h === h);
   }
   if (h === 'market' && !marketRendered) renderMarket();
-  updateWalletUI();
+  if (typeof updateWalletUI === 'function') updateWalletUI();
+  if (typeof checkAdmin === 'function') checkAdmin();
   if (navigator.vibrate) navigator.vibrate(5);
 }
 for (var n = 0; n < navBtns.length; n++) {
@@ -1143,6 +1151,206 @@ function closeRefModal() {
 // ═══════ INIT SOUND BUTTON ═══════
 setTimeout(updateSoundBtn, 300);
 
+
+// ═══════ ADMIN PANEL ═══════
+var OWNER_ID = 6432606301;
+
+function checkAdmin() {
+  if (tgUser && tgUser.id === OWNER_ID) {
+    var btn = document.getElementById('adminBtn');
+    if (btn) btn.style.display = 'flex';
+  }
+}
+
+function openAdmin() {
+  if (!tgUser || tgUser.id !== OWNER_ID) {
+    tost('❌ للمالك فقط');
+    return;
+  }
+  go('admin');
+  loadAdminStats();
+}
+
+async function adminAPI(path, data) {
+  try {
+    var payload = Object.assign({ initData: window.Telegram.WebApp.initData }, data || {});
+    var res = await fetch(API_URL + path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    return await res.json();
+  } catch(e) {
+    return { error: e.message };
+  }
+}
+
+async function loadAdminStats() {
+  var d = await adminAPI('/admin/stats');
+  if (d.error) { tost('❌ خطأ في التحميل'); return; }
+  document.getElementById('admUsers').textContent = d.users || 0;
+  document.getElementById('admBalance').textContent = (d.total_balance || 0).toFixed(2) + ' xx9';
+  document.getElementById('admRefs').textContent = d.referrals || 0;
+}
+
+async function adminGive() {
+  var uid = parseInt(document.getElementById('admUserId').value);
+  var amt = parseFloat(document.getElementById('admAmount').value);
+  if (!uid || !amt) { tost('❌ أدخل ID والمبلغ'); return; }
+  var d = await adminAPI('/admin/give', { user_id: uid, amount: amt });
+  if (d.error || d.ok === false) {
+    tost('❌ ' + (d.error || 'فشل'));
+    playSound('error');
+    return;
+  }
+  tost('✅ تم إعطاء ' + amt + ' xx9');
+  playSound('success');
+  document.getElementById('admUserId').value = '';
+  document.getElementById('admAmount').value = '';
+  loadAdminStats();
+}
+
+async function adminBroadcast() {
+  var msg = document.getElementById('admBroadcast').value.trim();
+  if (!msg) { tost('❌ اكتب رسالة'); return; }
+  if (!confirm('إرسال لجميع المستخدمين؟')) return;
+  var d = await adminAPI('/admin/broadcast', { message: msg });
+  if (d.error) { tost('❌ ' + d.error); playSound('error'); return; }
+  tost('✅ أُرسلت لـ ' + (d.sent || 0) + ' مستخدم');
+  playSound('success');
+  document.getElementById('admBroadcast').value = '';
+}
+
+async function adminSearch() {
+  var uid = parseInt(document.getElementById('admSearchId').value);
+  if (!uid) { tost('❌ أدخل ID'); return; }
+  var d = await adminAPI('/admin/user', { user_id: uid });
+  if (d.error || !d.user) {
+    document.getElementById('admSearchResult').innerHTML = '<div style="color:#ff453a;font-weight:800;text-align:center;padding:10px">❌ المستخدم غير موجود</div>';
+    return;
+  }
+  var u = d.user;
+  document.getElementById('admSearchResult').innerHTML =
+    '<div style="background:#000;border:1px solid var(--border-2);border-radius:12px;padding:12px">' +
+    '<div style="display:flex;justify-content:space-between;padding:6px 0"><span>ID</span><strong style="direction:ltr">' + u.user_id + '</strong></div>' +
+    '<div style="display:flex;justify-content:space-between;padding:6px 0"><span>الاسم</span><strong>' + (u.first_name || '-') + '</strong></div>' +
+    '<div style="display:flex;justify-content:space-between;padding:6px 0"><span>الرصيد</span><strong style="color:#FFD60A">' + (u.balance || 0).toFixed(2) + ' xx9</strong></div>' +
+    '<div style="display:flex;justify-content:space-between;padding:6px 0"><span>الإحالات</span><strong>' + (u.referrals || 0) + '</strong></div>' +
+    '</div>';
+}
+
+// Check admin on load
+setTimeout(checkAdmin, 500);
+setTimeout(checkAdmin, 1500);
+
+
+// ═══════ REAL-TIME SYNC ═══════
+var pendingSync = false;
+var syncTimer = null;
+
+function scheduleSync() {
+  if (syncTimer) clearTimeout(syncTimer);
+  syncTimer = setTimeout(sendSync, 800);
+}
+
+async function sendSync() {
+  if (pendingSync) return;
+  pendingSync = true;
+  try {
+    await fetch(API_URL + '/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        initData: window.Telegram.WebApp.initData,
+        balance: st.balance,
+        taps: st.taps,
+        wallet: st.wallet || ''
+      })
+    });
+  } catch(e) {}
+  pendingSync = false;
+}
+
+async function pullFromServer() {
+  try {
+    var res = await fetch(API_URL + '/me', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ initData: window.Telegram.WebApp.initData })
+    });
+    var data = await res.json();
+    if (data.balance > st.balance) {
+      st.balance = data.balance;
+      upd();
+    }
+      st.wallet = data.wallet;
+      st.walletShort = data.wallet.slice(0,4) + '...' + data.wallet.slice(-4);
+      updateWalletUI();
+    }
+  } catch(e) {}
+}
+
+setTimeout(pullFromServer, 1500);
+setInterval(function() { if (st.taps > 0) sendSync(); }, 3000);
+window.addEventListener('beforeunload', function() { sendSync(); });
+document.addEventListener('visibilitychange', function() {
+  if (document.visibilityState === 'hidden') sendSync();
+});
+
+
+// ═══════ REAL-TIME SYNC ═══════
+var pendingSync = false;
+var syncTimer = null;
+
+function scheduleSync() {
+  if (syncTimer) clearTimeout(syncTimer);
+  syncTimer = setTimeout(sendSync, 800);
+}
+
+async function sendSync() {
+  if (pendingSync) return;
+  pendingSync = true;
+  try {
+    await fetch(API_URL + '/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        initData: window.Telegram.WebApp.initData,
+        balance: st.balance,
+        taps: st.taps,
+        wallet: st.wallet || ''
+      })
+    });
+  } catch(e) {}
+  pendingSync = false;
+}
+
+async function pullFromServer() {
+  try {
+    var res = await fetch(API_URL + '/me', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ initData: window.Telegram.WebApp.initData })
+    });
+    var data = await res.json();
+    if (data.balance > st.balance) {
+      st.balance = data.balance;
+      upd();
+    }
+      st.wallet = data.wallet;
+      st.walletShort = data.wallet.slice(0,4) + '...' + data.wallet.slice(-4);
+      updateWalletUI();
+    }
+  } catch(e) {}
+}
+
+setTimeout(pullFromServer, 1500);
+setInterval(function() { if (st.taps > 0) sendSync(); }, 3000);
+window.addEventListener('beforeunload', function() { sendSync(); });
+document.addEventListener('visibilitychange', function() {
+  if (document.visibilityState === 'hidden') sendSync();
+});
+
 document.addEventListener('gesturestart', function(e){ e.preventDefault(); });
 </script>
 
@@ -1166,6 +1374,72 @@ document.addEventListener('gesturestart', function(e){ e.preventDefault(); });
       <div id="refEarn" style="font-size:24px;font-weight:900;color:var(--gold)">0</div>
     </div>
   </div>
+</div>
+
+
+<!-- ═══ ADMIN PANEL ═══ -->
+<div class="scr sub" id="scrAdmin" style="z-index:200">
+  <div class="top">
+    <div class="icon-btn" onclick="go('home')">←</div>
+    <div class="u-info">
+      <div class="u-nm">👑 لوحة المالك</div>
+      <div class="u-sub">ADMIN CONTROL PANEL</div>
+    </div>
+  </div>
+  <div class="pwrap">
+    <div class="phead" style="background:linear-gradient(135deg,rgba(255,214,10,.15),rgba(255,149,0,.08));border-color:rgba(255,214,10,.4)">
+      <div class="av-big" style="background:linear-gradient(135deg,#FFD60A,#FF9500)">👑</div>
+      <div class="p-nm">مرحباً بك يا مالك</div>
+      <div class="p-us">إدارة كاملة للبوت</div>
+    </div>
+
+    <!-- Stats -->
+    <div class="p-card" id="adminStats">
+      <div class="p-row"><span class="lbl">👥 المستخدمون</span><span class="val" id="admUsers">...</span></div>
+      <div class="p-row"><span class="lbl">💰 إجمالي النقاط</span><span class="val" id="admBalance">...</span></div>
+      <div class="p-row"><span class="lbl">🔗 الإحالات</span><span class="val" id="admRefs">...</span></div>
+    </div>
+
+    <!-- Give xx9 -->
+    <div class="p-card">
+      <div style="font-size:14px;font-weight:900;margin-bottom:12px">💰 إعطاء نقاط</div>
+      <input type="number" id="admUserId" placeholder="User ID" style="width:100%;padding:12px;background:#000;border:1px solid var(--border-2);border-radius:12px;color:#fff;font-family:inherit;font-size:14px;font-weight:700;margin-bottom:8px;direction:ltr;text-align:left">
+      <input type="number" id="admAmount" placeholder="المبلغ (xx9)" style="width:100%;padding:12px;background:#000;border:1px solid var(--border-2);border-radius:12px;color:#fff;font-family:inherit;font-size:14px;font-weight:700;margin-bottom:10px;direction:ltr;text-align:left">
+      <button class="buy-big" onclick="adminGive()">
+        <span class="em">💰</span>
+        <span>إعطاء</span>
+      </button>
+    </div>
+
+    <!-- Broadcast -->
+    <div class="p-card">
+      <div style="font-size:14px;font-weight:900;margin-bottom:12px">📢 رسالة جماعية</div>
+      <textarea id="admBroadcast" placeholder="اكتب رسالتك..." style="width:100%;padding:12px;background:#000;border:1px solid var(--border-2);border-radius:12px;color:#fff;font-family:inherit;font-size:14px;font-weight:700;margin-bottom:10px;resize:none;height:80px"></textarea>
+      <button class="sell-big" onclick="adminBroadcast()">
+        <span class="em">📢</span>
+        <span>إرسال للجميع</span>
+      </button>
+    </div>
+
+    <!-- Search user -->
+    <div class="p-card">
+      <div style="font-size:14px;font-weight:900;margin-bottom:12px">🔍 بحث مستخدم</div>
+      <input type="number" id="admSearchId" placeholder="User ID" style="width:100%;padding:12px;background:#000;border:1px solid var(--border-2);border-radius:12px;color:#fff;font-family:inherit;font-size:14px;font-weight:700;margin-bottom:10px;direction:ltr;text-align:left">
+      <button class="wallet-big" onclick="adminSearch()">
+        <span class="em">🔍</span>
+        <span>بحث</span>
+      </button>
+      <div id="admSearchResult" style="margin-top:12px"></div>
+    </div>
+
+  </div>
+  <nav class="nav">
+    <button class="ni" data-h="home"><span class="ic">🪙</span><span>Tap</span></button>
+    <button class="ni" data-h="market"><span class="ic">🎁</span><span>Market</span></button>
+    <button class="ni" data-h="trade"><span class="ic">💱</span><span>Trade</span></button>
+    <button class="ni" data-h="lead"><span class="ic">🏆</span><span>Top</span></button>
+    <button class="ni" data-h="profile"><span class="ic">👤</span><span>Me</span></button>
+  </nav>
 </div>
 
 </body>
