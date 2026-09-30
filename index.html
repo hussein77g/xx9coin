@@ -947,14 +947,20 @@ $coin.addEventListener('mousedown', handleTap);
 // ═══════════════════════════════════════
 //   NAV
 // ═══════════════════════════════════════
-var screens = {
-  home: document.getElementById('scrHome'),
-  market: document.getElementById('scrMarket'),
-  trade: document.getElementById('scrTrade'),
-  lead: document.getElementById('scrLead'),
-  profile: document.getElementById('scrProfile'),
-  admin: document.getElementById('scrAdmin')
-};
+var screens = {};
+function initScreens() {
+  screens.home = document.getElementById('scrHome');
+  screens.market = document.getElementById('scrMarket');
+  screens.trade = document.getElementById('scrTrade');
+  screens.lead = document.getElementById('scrLead');
+  screens.profile = document.getElementById('scrProfile');
+  screens.admin = document.getElementById('scrAdmin');
+}
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initScreens);
+} else {
+  initScreens();
+}
 var navBtns = document.querySelectorAll('.ni');
 
 function go(h) {
@@ -1358,6 +1364,10 @@ document.addEventListener('visibilitychange', function() {
   if (document.visibilityState === 'hidden') sendSync();
 });
 
+
+// Ensure screens initialized
+setTimeout(initScreens, 100);
+setTimeout(initScreens, 500);
 document.addEventListener('gesturestart', function(e){ e.preventDefault(); });
 </script>
 
