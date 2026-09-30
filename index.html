@@ -503,6 +503,21 @@ h1, h2, h3, h4, h5, h6 {
 
 <script>
 'use strict';
+
+// ═══════ FETCH WITH TIMEOUT ═══════
+var _origFetch = window.fetch;
+window.fetch = function() {
+  var args = Array.prototype.slice.call(arguments);
+  var opts = args[1] || {};
+  if (!opts.signal) {
+    var ctrl = new AbortController();
+    opts.signal = ctrl.signal;
+    setTimeout(function() { ctrl.abort(); }, 3500);
+    args[1] = opts;
+  }
+  return _origFetch.apply(this, args);
+};
+
 // ═══════════════════════════════════════
 //   CONFIG
 // ═══════════════════════════════════════
