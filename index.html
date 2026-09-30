@@ -6,15 +6,10 @@
 <meta name="theme-color" content="#000000">
 <title>xx9coin</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
 <style>
-*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',sans-serif;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
-html,body{background:#000;color:#fff;height:100vh;overflow:hidden;user-select:none;position:fixed;width:100%;-webkit-overflow-scrolling:touch}
-
-/* PERFORMANCE HINTS */
-.gpu{transform:translateZ(0);will-change:transform;backface-visibility:hidden}
-.coin,.float,.part,.gift-btn,.buy-big,.sell-big{will-change:transform}
-
-/* SCREENS */
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',sans-serif;-webkit-font-smoothing:antialiased}
+html,body{background:#000;color:#fff;height:100vh;overflow:hidden;user-select:none;position:fixed;width:100%}
 .scr{position:fixed;inset:0;z-index:50;display:none;flex-direction:column;overflow:hidden;transform:translateZ(0)}
 .scr.on{display:flex}
 .scr.home.on{animation:fadeHome .25s ease}
@@ -31,6 +26,12 @@ html,body{background:#000;color:#fff;height:100vh;overflow:hidden;user-select:no
 .u-sub{font-size:10px;color:#8e8e93;font-weight:700}
 .icon-btn{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.08);border:.5px solid rgba(255,255,255,.1);color:#fff;font-size:16px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:transform .1s}
 .icon-btn:active{transform:scale(.92)}
+.wallet-chip{background:linear-gradient(135deg,#0088FF,#00D4FF);border-radius:14px;padding:8px 12px;color:#fff;font-weight:900;font-size:11px;cursor:pointer;border:none;font-family:inherit;display:flex;align-items:center;gap:6px;flex-shrink:0;transition:transform .1s;box-shadow:0 4px 12px rgba(0,136,255,.35)}
+.wallet-chip:active{transform:scale(.95)}
+.wallet-chip.connected{background:linear-gradient(135deg,#30D158,#00B84C);box-shadow:0 4px 12px rgba(48,209,88,.35)}
+.wallet-chip .dot{width:8px;height:8px;border-radius:50%;background:#fff;box-shadow:0 0 6px #fff}
+.wallet-chip .dot.off{background:#FFD60A;box-shadow:0 0 6px #FFD60A;animation:blink 1.5s infinite}
+@keyframes blink{50%{opacity:.3}}
 
 /* BALANCE */
 .bal-wrap{padding:22px 18px 12px;text-align:center;flex-shrink:0}
@@ -38,17 +39,16 @@ html,body{background:#000;color:#fff;height:100vh;overflow:hidden;user-select:no
 .bal-val{font-size:46px;font-weight:900;letter-spacing:-2px;line-height:1;display:flex;align-items:baseline;justify-content:center;gap:6px}
 .bal-val .num{background:linear-gradient(135deg,#FFE066,#FFD60A 40%,#FF9500);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 2px 12px rgba(255,214,10,.4))}
 .bal-val .cur{font-size:16px;color:#8e8e93;font-weight:800;-webkit-text-fill-color:#8e8e93}
+.wallet-info{margin-top:10px;font-size:11px;color:#8e8e93;font-weight:700;font-family:monospace;direction:ltr}
 
 /* COIN */
 .coin-area{flex:1;display:flex;align-items:center;justify-content:center;position:relative;padding:10px;min-height:0}
-.coin{width:240px;height:240px;border-radius:50%;background:radial-gradient(circle at 30% 30%,#FFE066 0%,#FFD60A 35%,#FF9500 75%,#E67E00 100%);display:flex;align-items:center;justify-content:center;font-size:120px;cursor:pointer;position:relative;box-shadow:0 0 60px rgba(255,214,10,.5),0 0 120px rgba(255,149,0,.3),inset 0 -18px 36px rgba(180,90,0,.5),inset 0 18px 36px rgba(255,255,255,.5),0 20px 40px rgba(0,0,0,.3);transition:transform .06s ease;user-select:none;touch-action:manipulation}
+.coin{width:240px;height:240px;border-radius:50%;background:radial-gradient(circle at 30% 30%,#FFE066 0%,#FFD60A 35%,#FF9500 75%,#E67E00 100%);display:flex;align-items:center;justify-content:center;font-size:120px;cursor:pointer;position:relative;box-shadow:0 0 60px rgba(255,214,10,.5),0 0 120px rgba(255,149,0,.3),inset 0 -18px 36px rgba(180,90,0,.5),inset 0 18px 36px rgba(255,255,255,.5),0 20px 40px rgba(0,0,0,.3);transition:transform .06s ease;user-select:none;touch-action:manipulation;will-change:transform}
 .coin::before{content:'';position:absolute;inset:14px;border-radius:50%;border:3px dashed rgba(255,255,255,.32);animation:spin 30s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .coin:active{transform:scale(.93)}
 .coin.pulse{animation:coinPulse .25s ease-out}
 @keyframes coinPulse{50%{transform:scale(1.06)}}
-
-/* FLOAT */
 .float{position:fixed;font-size:22px;font-weight:900;color:#FFD60A;pointer-events:none;text-shadow:0 0 12px rgba(255,214,10,.9);will-change:transform,opacity;z-index:9999}
 .part{position:fixed;width:6px;height:6px;background:#FFD60A;border-radius:50%;pointer-events:none;z-index:9998;box-shadow:0 0 10px #FFD60A;will-change:transform,opacity}
 
@@ -59,14 +59,12 @@ html,body{background:#000;color:#fff;height:100vh;overflow:hidden;user-select:no
 .ni .ic{font-size:22px;transition:transform .18s cubic-bezier(.34,1.56,.64,1)}
 .ni.on .ic{transform:translateY(-2px) scale(1.05)}
 
-/* MARKET / HEADERS */
+/* MARKET */
 .mhead{padding:20px 18px 12px;flex-shrink:0}
 .mtitle{font-size:26px;font-weight:900;letter-spacing:-.8px;margin-bottom:4px}
 .msub{font-size:12px;color:#8e8e93;font-weight:700}
 .mlist{padding:0 18px 130px;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
-
-/* GIFT */
-.gift{background:linear-gradient(135deg,#1c1c1e,#161618);border-radius:18px;padding:14px;margin-bottom:10px;display:flex;align-items:center;gap:12px;border:.5px solid rgba(255,255,255,.05);contain:layout style}
+.gift{background:linear-gradient(135deg,#1c1c1e,#161618);border-radius:18px;padding:14px;margin-bottom:10px;display:flex;align-items:center;gap:12px;border:.5px solid rgba(255,255,255,.05)}
 .gift-em{width:56px;height:56px;border-radius:16px;background:linear-gradient(135deg,rgba(255,255,255,.08),rgba(255,255,255,.02));display:flex;align-items:center;justify-content:center;font-size:30px;flex-shrink:0;border:.5px solid rgba(255,255,255,.06)}
 .gift-info{flex:1;min-width:0}
 .gift-nm{font-size:14px;font-weight:800;margin-bottom:3px}
@@ -86,14 +84,19 @@ html,body{background:#000;color:#fff;height:100vh;overflow:hidden;user-select:no
 .p-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:.5px solid rgba(255,255,255,.06);flex-direction:row-reverse}
 .p-row:last-child{border-bottom:none}
 .p-row .lbl{font-size:13px;color:#c7c7cc;font-weight:700}
-.p-row .val{font-size:14px;font-weight:900;color:#fff}
+.p-row .val{font-size:14px;font-weight:900;color:#fff;font-family:monospace;direction:ltr}
 
 /* BUTTONS */
-.buy-big{background:linear-gradient(135deg,#00D4FF,#0088FF);border:none;border-radius:18px;padding:18px;color:#fff;font-weight:900;font-size:15px;cursor:pointer;font-family:inherit;width:100%;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 10px 30px rgba(0,212,255,.35),inset 0 1px 0 rgba(255,255,255,.2);letter-spacing:-.2px;transition:transform .12s}
+.wallet-big{background:linear-gradient(135deg,#0088FF,#00D4FF);border:none;border-radius:18px;padding:18px;color:#fff;font-weight:900;font-size:15px;cursor:pointer;font-family:inherit;width:100%;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 10px 30px rgba(0,136,255,.35);letter-spacing:-.2px;transition:transform .12s}
+.wallet-big:active{transform:scale(.97)}
+.wallet-big.connected{background:linear-gradient(135deg,#30D158,#00B84C);box-shadow:0 10px 30px rgba(48,209,88,.35)}
+.wallet-big .em{font-size:22px}
+
+.buy-big{background:linear-gradient(135deg,#00D4FF,#0088FF);border:none;border-radius:18px;padding:18px;color:#fff;font-weight:900;font-size:15px;cursor:pointer;font-family:inherit;width:100%;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 10px 30px rgba(0,212,255,.35);transition:transform .12s}
 .buy-big:active{transform:scale(.97)}
 .buy-big .em{font-size:22px}
 
-.sell-big{background:linear-gradient(135deg,#30D158,#00B84C);border:none;border-radius:18px;padding:18px;color:#fff;font-weight:900;font-size:15px;cursor:pointer;font-family:inherit;width:100%;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 10px 30px rgba(48,209,88,.35),inset 0 1px 0 rgba(255,255,255,.2);letter-spacing:-.2px;transition:transform .12s}
+.sell-big{background:linear-gradient(135deg,#30D158,#00B84C);border:none;border-radius:18px;padding:18px;color:#fff;font-weight:900;font-size:15px;cursor:pointer;font-family:inherit;width:100%;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 10px 30px rgba(48,209,88,.35);transition:transform .12s}
 .sell-big:active{transform:scale(.97)}
 .sell-big .em{font-size:22px}
 
@@ -107,8 +110,8 @@ html,body{background:#000;color:#fff;height:100vh;overflow:hidden;user-select:no
 .price-row .pts{color:#FFD60A;font-weight:900;direction:ltr}
 
 /* MODAL */
-.modal{position:fixed;inset:0;z-index:5000;background:rgba(0,0,0,.92);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);display:none;align-items:center;justify-content:center;flex-direction:column;padding:30px;text-align:center}
-.modal.on{display:flex;animation:fadeHome .2s}
+.modal{position:fixed;inset:0;z-index:5000;background:rgba(0,0,0,.92);backdrop-filter:blur(30px);display:none;align-items:center;justify-content:center;flex-direction:column;padding:30px;text-align:center}
+.modal.on{display:flex}
 .modal-em{font-size:110px;margin-bottom:16px;animation:modalPop .5s cubic-bezier(.34,1.56,.64,1)}
 @keyframes modalPop{0%{transform:scale(0) rotate(-180deg)}100%{transform:scale(1)}}
 .modal-ti{font-size:24px;font-weight:900;margin-bottom:8px;letter-spacing:-.5px}
@@ -116,28 +119,32 @@ html,body{background:#000;color:#fff;height:100vh;overflow:hidden;user-select:no
 .modal-btn{background:linear-gradient(135deg,#00D4FF,#0088FF);border:none;border-radius:16px;padding:14px 40px;color:#fff;font-weight:900;font-size:15px;cursor:pointer;font-family:inherit;box-shadow:0 10px 30px rgba(0,212,255,.4)}
 
 /* TOAST */
-.ts{position:fixed;top:100px;left:50%;transform:translate3d(-50%,-200px,0);background:rgba(28,28,30,.98);color:#fff;padding:13px 22px;border-radius:14px;font-weight:800;font-size:13px;z-index:10000;transition:transform .35s cubic-bezier(.68,-.55,.265,1.55);border:.5px solid rgba(255,255,255,.1);max-width:88%;text-align:center;will-change:transform}
+.ts{position:fixed;top:100px;left:50%;transform:translate3d(-50%,-200px,0);background:rgba(28,28,30,.98);color:#fff;padding:13px 22px;border-radius:14px;font-weight:800;font-size:13px;z-index:10000;transition:transform .35s cubic-bezier(.68,-.55,.265,1.55);border:.5px solid rgba(255,255,255,.1);max-width:88%;text-align:center}
 .ts.sh{transform:translate3d(-50%,0,0)}
 </style>
 </head>
 <body>
 
-<!-- ═══ HOME ═══ -->
+<!-- HOME -->
 <div class="scr home on" id="scrHome">
   <div class="top">
     <div class="avatar" id="uAv">P</div>
     <div class="u-info">
       <div class="u-nm" id="uNm">Player</div>
-      <div class="u-sub">Tap to earn</div>
+      <div class="u-sub" id="uSub">Tap to earn</div>
     </div>
-    <div class="icon-btn" onclick="go('profile')">👤</div>
+    <button class="wallet-chip" id="walletChip" onclick="connectWallet()">
+      <span class="dot off"></span>
+      <span id="walletChipTxt">ربط</span>
+    </button>
   </div>
   <div class="bal-wrap">
     <div class="bal-lbl">YOUR BALANCE</div>
     <div class="bal-val"><span class="num" id="balNum">0.00</span> <span class="cur">xx9</span></div>
+    <div class="wallet-info" id="walletInfo"></div>
   </div>
   <div class="coin-area">
-    <div class="coin gpu" id="coin">🪙</div>
+    <div class="coin" id="coin">🪙</div>
   </div>
   <nav class="nav">
     <button class="ni on" data-h="home"><span class="ic">🪙</span><span>Tap</span></button>
@@ -147,7 +154,7 @@ html,body{background:#000;color:#fff;height:100vh;overflow:hidden;user-select:no
   </nav>
 </div>
 
-<!-- ═══ MARKET ═══ -->
+<!-- MARKET -->
 <div class="scr sub" id="scrMarket">
   <div class="top">
     <div class="icon-btn" onclick="go('home')">←</div>
@@ -158,7 +165,7 @@ html,body{background:#000;color:#fff;height:100vh;overflow:hidden;user-select:no
   </div>
   <div class="mhead">
     <div class="mtitle">🎁 الهدايا</div>
-    <div class="msub">أسعار بـ TON — للتفاوض راسل @r2r_rr</div>
+    <div class="msub">ادفع بـ TON مباشرة من محفظتك</div>
   </div>
   <div class="mlist" id="marketList"></div>
   <nav class="nav">
@@ -169,12 +176,12 @@ html,body{background:#000;color:#fff;height:100vh;overflow:hidden;user-select:no
   </nav>
 </div>
 
-<!-- ═══ TRADE (BUY + SELL) ═══ -->
+<!-- TRADE -->
 <div class="scr sub" id="scrTrade">
   <div class="top">
     <div class="icon-btn" onclick="go('home')">←</div>
     <div class="u-info">
-      <div class="u-nm">💱 تداول النقاط</div>
+      <div class="u-nm">💱 تداول</div>
       <div class="u-sub">اشترِ أو بِع xx9</div>
     </div>
   </div>
@@ -182,45 +189,40 @@ html,body{background:#000;color:#fff;height:100vh;overflow:hidden;user-select:no
     <div class="phead">
       <div class="av-big">💎</div>
       <div class="p-nm">xx9 Exchange</div>
-      <div class="p-us">اشترِ أو بِع بـ TON</div>
+      <div class="p-us">شراء وبيع بـ TON</div>
     </div>
 
-    <!-- BUY -->
-    <button class="buy-big" onclick="openDev('💳 أريد شراء xx9\n💰 سأدفع TON\n📊 رصيدي حالياً: ' + getBalText())">
-      <span class="em">💳</span>
-      <span>شراء xx9 بـ TON</span>
+    <button class="wallet-big" id="walletBig" onclick="connectWallet()">
+      <span class="em">🔗</span>
+      <span id="walletBigTxt">اربط محفظتك أولاً</span>
     </button>
 
-    <!-- SELL -->
-    <button class="sell-big" onclick="openDev('💱 أريد بيع نقاطي\n📊 رصيدي: ' + getBalText() + '\n💰 أريد استلام TON')">
+    <button class="buy-big" onclick="buyWithTON(0.5, 'xx9 Package S')">
+      <span class="em">💳</span>
+      <span>0.5 TON — حزمة صغيرة</span>
+    </button>
+    <button class="buy-big" onclick="buyWithTON(1, 'xx9 Package M')">
+      <span class="em">💳</span>
+      <span>1 TON — حزمة متوسطة</span>
+    </button>
+    <button class="buy-big" onclick="buyWithTON(5, 'xx9 Package L')">
+      <span class="em">💳</span>
+      <span>5 TON — حزمة كبيرة</span>
+    </button>
+    <button class="buy-big" onclick="buyWithTON(10, 'xx9 Package XL')">
+      <span class="em">💳</span>
+      <span>10 TON — حزمة عملاقة</span>
+    </button>
+
+    <button class="sell-big" onclick="openDev('💱 أريد بيع نقاطي\n📊 رصيدي: ' + getBalText())">
       <span class="em">💰</span>
       <span>بيع نقاطي مقابل TON</span>
     </button>
 
-    <!-- SUPPORT -->
     <button class="sup-big" onclick="openDev('❓ استفسار — رصيدي: ' + getBalText())">
       <span class="em">📩</span>
       <span>تواصل مع المطور @r2r_rr</span>
     </button>
-
-    <div class="price-box">
-      <div style="text-align:center;font-size:11px;color:#8e8e93;font-weight:800;letter-spacing:1px;margin-bottom:8px">💰 أسعار الشراء</div>
-      <div class="price-row"><span>حزمة صغيرة</span><span class="ton">0.5 TON</span></div>
-      <div class="price-row"><span>حزمة متوسطة</span><span class="ton">1 TON</span></div>
-      <div class="price-row"><span>حزمة كبيرة</span><span class="ton">5 TON</span></div>
-      <div class="price-row"><span>حزمة عملاقة</span><span class="ton">10 TON</span></div>
-    </div>
-
-    <div class="price-box" style="margin-top:10px">
-      <div style="text-align:center;font-size:11px;color:#8e8e93;font-weight:800;letter-spacing:1px;margin-bottom:8px">💸 أسعار البيع</div>
-      <div class="price-row"><span>10,000 xx9</span><span class="ton">0.1 TON</span></div>
-      <div class="price-row"><span>100,000 xx9</span><span class="ton">1 TON</span></div>
-      <div class="price-row"><span>1,000,000 xx9</span><span class="ton">8 TON</span></div>
-    </div>
-
-    <div style="text-align:center;font-size:11px;color:#636366;font-weight:700;padding:20px 0;line-height:1.7">
-      💬 للتفاوض والأسعار الخاصة<br>راسل @r2r_rr مباشرة
-    </div>
   </div>
   <nav class="nav">
     <button class="ni" data-h="home"><span class="ic">🪙</span><span>Tap</span></button>
@@ -230,13 +232,13 @@ html,body{background:#000;color:#fff;height:100vh;overflow:hidden;user-select:no
   </nav>
 </div>
 
-<!-- ═══ PROFILE ═══ -->
+<!-- PROFILE -->
 <div class="scr sub" id="scrProfile">
   <div class="top">
     <div class="icon-btn" onclick="go('home')">←</div>
     <div class="u-info">
       <div class="u-nm">👤 حسابي</div>
-      <div class="u-sub">معلوماتك وإحصائياتك</div>
+      <div class="u-sub">معلوماتك</div>
     </div>
   </div>
   <div class="pwrap">
@@ -249,7 +251,12 @@ html,body{background:#000;color:#fff;height:100vh;overflow:hidden;user-select:no
       <div class="p-row"><span class="lbl">💰 الرصيد</span><span class="val" id="pBal">0 xx9</span></div>
       <div class="p-row"><span class="lbl">👆 اللمسات</span><span class="val" id="pTaps">0</span></div>
       <div class="p-row"><span class="lbl">⭐ المستوى</span><span class="val" id="pLevel">1</span></div>
+      <div class="p-row"><span class="lbl">🔗 المحفظة</span><span class="val" id="pWallet">غير مربوطة</span></div>
     </div>
+    <button class="wallet-big" id="walletProf" onclick="connectWallet()">
+      <span class="em">🔗</span>
+      <span id="walletProfTxt">اربط محفظتك</span>
+    </button>
     <button class="buy-big" onclick="openDev('💳 أريد شراء xx9\n📊 رصيدي: ' + getBalText())">
       <span class="em">💳</span>
       <span>شراء نقاط</span>
@@ -267,10 +274,9 @@ html,body{background:#000;color:#fff;height:100vh;overflow:hidden;user-select:no
   </nav>
 </div>
 
-<!-- MODAL -->
 <div class="modal" id="modal">
-  <div class="modal-em" id="mEm">🎁</div>
-  <div class="modal-ti" id="mTi">جاري الفتح</div>
+  <div class="modal-em" id="mEm">🔗</div>
+  <div class="modal-ti" id="mTi">جاري</div>
   <div class="modal-sub" id="mSub"></div>
   <button class="modal-btn" onclick="closeModal()">موافق</button>
 </div>
@@ -279,11 +285,17 @@ html,body{background:#000;color:#fff;height:100vh;overflow:hidden;user-select:no
 
 <script>
 'use strict';
+// ═══════════════════════════════════════
+//   CONFIG
+// ═══════════════════════════════════════
 var DEV = 'r2r_rr';
 var PER_TAP = 0.01;
-var DPR = Math.min(3, window.devicePixelRatio || 1);
+var RECEIVER_ADDRESS = 'UQD-fCzstgdlLEtLxwVG2jYZbDvvUupZYP6af6QZz1-LXwfl';
+var MANIFEST_URL = 'https://xx9coin.vercel.app/tonconnect-manifest.json';
 
-// ═══ TELEGRAM ═══
+// ═══════════════════════════════════════
+//   TELEGRAM
+// ═══════════════════════════════════════
 var tgUser = null;
 try {
   var tg = window.Telegram && window.Telegram.WebApp;
@@ -297,8 +309,11 @@ try {
 } catch(e){}
 if (!tgUser) tgUser = { first_name:'Player', username:'player', id:0 };
 
-// ═══ CACHE DOM ═══
+// ═══════════════════════════════════════
+//   DOM CACHE
+// ═══════════════════════════════════════
 var $uNm = document.getElementById('uNm');
+var $uSub = document.getElementById('uSub');
 var $pName = document.getElementById('pName');
 var $pUser = document.getElementById('pUser');
 var $uAv = document.getElementById('uAv');
@@ -307,30 +322,36 @@ var $balNum = document.getElementById('balNum');
 var $pBal = document.getElementById('pBal');
 var $pTaps = document.getElementById('pTaps');
 var $pLevel = document.getElementById('pLevel');
+var $pWallet = document.getElementById('pWallet');
 var $coin = document.getElementById('coin');
 var $ts = document.getElementById('ts');
 var $market = document.getElementById('marketList');
+var $walletChip = document.getElementById('walletChip');
+var $walletChipTxt = document.getElementById('walletChipTxt');
+var $walletInfo = document.getElementById('walletInfo');
 
 $uNm.textContent = tgUser.first_name;
 $pName.textContent = tgUser.first_name;
 $pUser.textContent = '@' + (tgUser.username || 'player');
 var ini = (tgUser.first_name||'P')[0].toUpperCase();
 if (tgUser.photo_url) {
-  var img = '<img src="'+tgUser.photo_url+'" loading="eager">';
-  $uAv.innerHTML = img;
-  $pAv.innerHTML = img;
+  $uAv.innerHTML = '<img src="'+tgUser.photo_url+'">';
+  $pAv.innerHTML = '<img src="'+tgUser.photo_url+'">';
 } else {
   $uAv.textContent = ini;
   $pAv.textContent = ini;
 }
 
-// ═══ STATE ═══
+// ═══════════════════════════════════════
+//   STATE
+// ═══════════════════════════════════════
 var st = {
   balance: parseFloat(localStorage.getItem('xx_bal') || '0'),
-  taps: parseInt(localStorage.getItem('xx_taps') || '0')
+  taps: parseInt(localStorage.getItem('xx_taps') || '0'),
+  wallet: localStorage.getItem('xx_wallet') || '',
+  walletShort: localStorage.getItem('xx_wallet_short') || ''
 };
 
-// Throttled save (once per second max)
 var saveTimer = null;
 function saveLater() {
   if (saveTimer) return;
@@ -341,10 +362,11 @@ function saveLater() {
   }, 800);
 }
 
-// ═══ UI UPDATE (batched with rAF) ═══
+// ═══════════════════════════════════════
+//   UI
+// ═══════════════════════════════════════
 var updPending = false;
-var lastBal = '';
-var lastTaps = '';
+var lastBal = '', lastTaps = '';
 function upd() {
   if (updPending) return;
   updPending = true;
@@ -360,16 +382,178 @@ function upd() {
       $pTaps.textContent = tapsTxt;
       lastTaps = tapsTxt;
     }
-    var lvl = ((st.taps / 100) | 0) + 1;
-    $pLevel.textContent = lvl;
+    $pLevel.textContent = ((st.taps / 100) | 0) + 1;
     saveLater();
     updPending = false;
   });
 }
 
-// ═══ FLOATING NUMBERS (pooled) ═══
-var floatPool = [];
-var partPool = [];
+// ═══════════════════════════════════════
+//   WALLET UI
+// ═══════════════════════════════════════
+function updateWalletUI() {
+  if (st.wallet) {
+    $walletChip.classList.add('connected');
+    $walletChipTxt.textContent = st.walletShort;
+    $walletChip.querySelector('.dot').classList.remove('off');
+    $pWallet.textContent = st.walletShort;
+    $pWallet.style.color = '#30D158';
+    $walletInfo.textContent = st.wallet;
+    var wb = document.getElementById('walletBig');
+    var wt = document.getElementById('walletBigTxt');
+    if (wb) wb.classList.add('connected');
+    if (wt) wt.textContent = '✅ محفظتك مربوطة';
+    var wp = document.getElementById('walletProf');
+    var wpt = document.getElementById('walletProfTxt');
+    if (wp) wp.classList.add('connected');
+    if (wpt) wpt.textContent = '✅ ' + st.walletShort;
+  } else {
+    $walletChip.classList.remove('connected');
+    $walletChipTxt.textContent = 'ربط';
+    $walletChip.querySelector('.dot').classList.add('off');
+    $pWallet.textContent = 'غير مربوطة';
+    $pWallet.style.color = '#c7c7cc';
+    $walletInfo.textContent = '';
+    var wb2 = document.getElementById('walletBig');
+    var wt2 = document.getElementById('walletBigTxt');
+    if (wb2) wb2.classList.remove('connected');
+    if (wt2) wt2.textContent = '🔗 اربط محفظتك أولاً';
+    var wp2 = document.getElementById('walletProf');
+    var wpt2 = document.getElementById('walletProfTxt');
+    if (wp2) wp2.classList.remove('connected');
+    if (wpt2) wpt2.textContent = '🔗 اربط محفظتك';
+  }
+}
+
+// ═══════════════════════════════════════
+//   TON CONNECT
+// ═══════════════════════════════════════
+var tonConnectUI = null;
+
+function initTonConnect() {
+  try {
+    if (typeof TON_CONNECT_UI === 'undefined') {
+      console.log('TON Connect not loaded yet');
+      return;
+    }
+    tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
+      manifestUrl: MANIFEST_URL,
+      buttonRootId: null
+    });
+
+    tonConnectUI.onStatusChange(function(wallet) {
+      if (wallet && wallet.account && wallet.account.address) {
+        var addr = wallet.account.address;
+        st.wallet = addr;
+        st.walletShort = addr.slice(0, 4) + '...' + addr.slice(-4);
+        localStorage.setItem('xx_wallet', addr);
+        localStorage.setItem('xx_wallet_short', st.walletShort);
+        updateWalletUI();
+        tost('✅ تم ربط المحفظة!');
+        if (navigator.vibrate) navigator.vibrate([20, 40, 20]);
+      } else {
+        st.wallet = '';
+        st.walletShort = '';
+        localStorage.removeItem('xx_wallet');
+        localStorage.removeItem('xx_wallet_short');
+        updateWalletUI();
+      }
+    });
+
+    // Restore previous connection
+    if (tonConnectUI.connected) {
+      var w = tonConnectUI.wallet;
+      if (w && w.account && w.account.address) {
+        var addr2 = w.account.address;
+        st.wallet = addr2;
+        st.walletShort = addr2.slice(0, 4) + '...' + addr2.slice(-4);
+        localStorage.setItem('xx_wallet', addr2);
+        localStorage.setItem('xx_wallet_short', st.walletShort);
+      }
+    }
+  } catch(e) {
+    console.log('TON Connect init error:', e);
+  }
+  updateWalletUI();
+}
+
+// Open wallet connection modal
+function connectWallet() {
+  if (!tonConnectUI) {
+    // Try to init again
+    initTonConnect();
+    if (!tonConnectUI) {
+      tost('⚠️ المحفظة تحتاج اتصال إنترنت');
+      return;
+    }
+  }
+  if (st.wallet) {
+    // Already connected — show disconnect option
+    document.getElementById('mEm').textContent = '🔗';
+    document.getElementById('mTi').textContent = 'المحفظة مربوطة';
+    document.getElementById('mSub').textContent = st.wallet + '\n\nهل تريد فصلها؟';
+    document.getElementById('modal').classList.add('on');
+    var btn = document.querySelector('.modal-btn');
+    btn.textContent = 'فصل المحفظة';
+    btn.onclick = function() {
+      tonConnectUI.disconnect();
+      closeModal();
+      setTimeout(function(){
+        var b = document.querySelector('.modal-btn');
+        b.textContent = 'موافق';
+        b.onclick = closeModal;
+      }, 300);
+    };
+    return;
+  }
+  tonConnectUI.openModal();
+}
+
+// ═══════════════════════════════════════
+//   BUY WITH TON
+// ═══════════════════════════════════════
+async function buyWithTON(amountTON, itemName) {
+  if (!tonConnectUI || !st.wallet) {
+    tost('🔗 اربط محفظتك أولاً');
+    connectWallet();
+    return;
+  }
+  try {
+    var amountNano = Math.floor(amountTON * 1e9).toString();
+    var tx = {
+      validUntil: Math.floor(Date.now() / 1000) + 600,
+      messages: [
+        {
+          address: RECEIVER_ADDRESS,
+          amount: amountNano
+        }
+      ]
+    };
+    var result = await tonConnectUI.sendTransaction(tx);
+    // Success
+    document.getElementById('mEm').textContent = '✅';
+    document.getElementById('mTi').textContent = 'تم الدفع بنجاح!';
+    document.getElementById('mSub').textContent = 'المبلغ: ' + amountTON + ' TON\n\nراسل @r2r_rr لاستلام ' + itemName;
+    document.getElementById('modal').classList.add('on');
+    if (navigator.vibrate) navigator.vibrate([50, 100, 50]);
+    // Open dev chat
+    setTimeout(function(){
+      openDev('✅ دفعت ' + amountTON + ' TON لـ ' + itemName + '\n📊 رصيدي: ' + getBalText() + '\n🔗 محفظتي: ' + st.wallet);
+    }, 1800);
+  } catch(e) {
+    if (e && e.message && e.message.includes('cancel')) {
+      tost('❌ ألغيت العملية');
+    } else {
+      tost('❌ فشلت العملية');
+      console.log(e);
+    }
+  }
+}
+
+// ═══════════════════════════════════════
+//   FLOAT / PARTICLES (pooled)
+// ═══════════════════════════════════════
+var floatPool = [], partPool = [];
 function getFloat() {
   if (floatPool.length) return floatPool.pop();
   var f = document.createElement('div');
@@ -383,7 +567,9 @@ function getPart() {
   return p;
 }
 
-// ═══ TAP ═══
+// ═══════════════════════════════════════
+//   TAP
+// ═══════════════════════════════════════
 function tap(clientX, clientY) {
   st.balance += PER_TAP;
   st.taps++;
@@ -393,12 +579,10 @@ function tap(clientX, clientY) {
   var x = clientX || window.innerWidth/2;
   var y = clientY || window.innerHeight/2;
 
-  // Floating +0.01
   var f = getFloat();
   f.textContent = '+0.01';
   f.style.left = (x - 30) + 'px';
   f.style.top = (y - 20) + 'px';
-  f.style.opacity = '1';
   document.body.appendChild(f);
   var fx = f.animate([
     { transform: 'translate3d(0,0,0) scale(1)', opacity: 1 },
@@ -409,7 +593,6 @@ function tap(clientX, clientY) {
     if (floatPool.length < 10) floatPool.push(f);
   };
 
-  // 3 particles (was 4)
   for (var i = 0; i < 3; i++) {
     var p = getPart();
     p.style.left = x + 'px';
@@ -434,12 +617,11 @@ function tap(clientX, clientY) {
   upd();
 }
 
-// Use pointer events for best perf
 var lastTapTime = 0;
 function handleTap(e) {
   e.preventDefault();
   var now = performance.now();
-  if (now - lastTapTime < 30) return; // throttle to ~33fps min between taps
+  if (now - lastTapTime < 30) return;
   lastTapTime = now;
   var t = e.touches ? e.touches[0] : e;
   tap(t.clientX, t.clientY);
@@ -447,7 +629,9 @@ function handleTap(e) {
 $coin.addEventListener('touchstart', handleTap, {passive:false});
 $coin.addEventListener('mousedown', handleTap);
 
-// ═══ NAV ═══
+// ═══════════════════════════════════════
+//   NAV
+// ═══════════════════════════════════════
 var screens = {
   home: document.getElementById('scrHome'),
   market: document.getElementById('scrMarket'),
@@ -463,6 +647,7 @@ function go(h) {
     navBtns[i].classList.toggle('on', navBtns[i].dataset.h === h);
   }
   if (h === 'market' && !marketRendered) renderMarket();
+  updateWalletUI();
   if (navigator.vibrate) navigator.vibrate(5);
 }
 for (var n = 0; n < navBtns.length; n++) {
@@ -471,7 +656,9 @@ for (var n = 0; n < navBtns.length; n++) {
   })(navBtns[n]);
 }
 
-// ═══ MARKET ═══
+// ═══════════════════════════════════════
+//   MARKET
+// ═══════════════════════════════════════
 var GIFTS = [
   { em:'🌹', name:'وردة',      desc:'هدية رومانسية', ton: 0.1 },
   { em:'❤️', name:'قلب أحمر', desc:'عبّر عن حبك',    ton: 0.5 },
@@ -512,22 +699,30 @@ function renderMarket() {
 }
 
 function buyGift(g) {
+  if (!st.wallet) {
+    tost('🔗 اربط محفظتك أولاً');
+    connectWallet();
+    return;
+  }
+  // Confirm modal
   document.getElementById('mEm').textContent = g.em;
-  document.getElementById('mTi').textContent = '🎁 ' + g.name;
-  document.getElementById('mSub').textContent = 'السعر: ' + g.ton + ' TON\n\nسيتم فتح محادثة المطور';
+  document.getElementById('mTi').textContent = g.name + ' — ' + g.ton + ' TON';
+  document.getElementById('mSub').textContent = 'سيتم فتح محفظتك للدفع';
   document.getElementById('modal').classList.add('on');
   if (navigator.vibrate) navigator.vibrate([15, 30, 15]);
   setTimeout(function(){
-    var msg = '🛒 أريد شراء: ' + g.em + ' ' + g.name + '\n💰 السعر: ' + g.ton + ' TON\n📊 رصيدي: ' + getBalText();
-    openDev(msg);
-  }, 1400);
+    closeModal();
+    buyWithTON(g.ton, g.em + ' ' + g.name);
+  }, 1000);
 }
 
 function closeModal() {
   document.getElementById('modal').classList.remove('on');
 }
 
-// ═══ UTILS ═══
+// ═══════════════════════════════════════
+//   UTILS
+// ═══════════════════════════════════════
 function getBalText() {
   return st.balance.toFixed(2) + ' xx9';
 }
@@ -537,7 +732,6 @@ function openDev(msg) {
   var tgUrl = 'https://t.me/' + DEV;
   try {
     if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openTelegramLink) {
-      // Copy to clipboard so user can paste if needed
       if (navigator.clipboard) navigator.clipboard.writeText(text);
       window.Telegram.WebApp.openTelegramLink(tgUrl);
     } else {
@@ -552,11 +746,23 @@ function tost(m) {
   $ts.textContent = m;
   $ts.classList.add('sh');
   clearTimeout(tost._t);
-  tost._t = setTimeout(function(){ $ts.classList.remove('sh'); }, 2000);
+  tost._t = setTimeout(function(){ $ts.classList.remove('sh'); }, 2200);
 }
 
-// ═══ INIT ═══
+// ═══════════════════════════════════════
+//   INIT
+// ═══════════════════════════════════════
 upd();
+updateWalletUI();
+
+// Init TON Connect after page load
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', function(){
+    setTimeout(initTonConnect, 500);
+  });
+} else {
+  setTimeout(initTonConnect, 500);
+}
 
 // Prevent double-tap zoom
 document.addEventListener('gesturestart', function(e){ e.preventDefault(); });
