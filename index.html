@@ -555,7 +555,7 @@ var DEV = 'r2r_rr';
 var PER_TAP = 0.01;
 var RECEIVER_ADDRESS = 'UQD-fCzstgdlLEtLxwVG2jYZbDvvUupZYP6af6QZz1-LXwfl';
 var MANIFEST_URL = 'https://xx9coin.vercel.app/tonconnect-manifest.json';
-var API_URL='https://persistent-highland-according-did.trycloudflare.com';
+var API_URL='https://explore-observed-humidity-barely.trycloudflare.com';
 
 // ═══════════════════════════════════════
 //   TELEGRAM
@@ -1238,12 +1238,13 @@ async function adminAPI(path, data) {
     } catch(e) {}
 
     if (!initData) {
-      return { error: 'no initData' };
+      console.log('No initData');
+      return { error: 'افتح من تيليجرام' };
     }
 
     var payload = Object.assign({ initData: initData }, data || {});
     var controller = new AbortController();
-    var timeoutId = setTimeout(function() { controller.abort(); }, 5000);
+    var timeoutId = setTimeout(function() { controller.abort(); }, 8000);
 
     var res = await fetch(API_URL + path, {
       method: 'POST',
@@ -1254,11 +1255,13 @@ async function adminAPI(path, data) {
     clearTimeout(timeoutId);
 
     var txt = await res.text();
+    console.log('API ' + path + ' => ' + res.status + ' ' + txt.substring(0, 200));
     var json;
-    try { json = JSON.parse(txt); } catch(e) { json = { error: 'bad json' }; }
+    try { json = JSON.parse(txt); } catch(e) { json = { error: 'JSON error' }; }
     if (!res.ok) { json.error = json.error || ('HTTP ' + res.status); }
     return json;
   } catch(e) {
+    console.log('API error:', e);
     return { error: e.message || 'network' };
   }
 }
@@ -1580,14 +1583,13 @@ async function adminCreateAd() {
   var img = document.getElementById('admAdImg').value.trim();
   var url = document.getElementById('admAdUrl').value.trim();
   var sponsor = document.getElementById('admAdSponsor').value.trim();
-  var price = parseFloat(document.getElementById('admAdPrice').value) || 0;
   var days = parseInt(document.getElementById('admAdDays').value) || 7;
   if (!title || !url) { tost('ادخل العنوان والرابط'); return; }
-  var d = await adminAPI('/admin/ads/create', { title: title, desc: desc, img: img, url: url, sponsor: sponsor, price: price, days: days });
+  var d = await adminAPI('/admin/ads/create', { title: title, desc: desc, img: img, url: url, sponsor: sponsor, days: days });
   if (d.error || d.ok === false) { tost('فشل: ' + (d.error || 'unknown')); return; }
   tost('تم اضافة الاعلان لمدة ' + days + ' ايام');
   playSound('success');
-  ['admAdTitle','admAdDesc','admAdImg','admAdUrl','admAdSponsor','admAdPrice'].forEach(function(id){ document.getElementById(id).value = ''; });
+  ['admAdTitle','admAdDesc','admAdImg','admAdUrl','admAdSponsor'].forEach(function(id){ document.getElementById(id).value = ''; });
   document.getElementById('admAdDays').value = '7';
   loadAdsList();
 }
@@ -1617,7 +1619,7 @@ async function loadAdsList() {
       '<div style="display:flex;justify-content:space-between;font-size:11px;color:#7a7a82;margin-bottom:8px">' +
       '<span>' + a.clicks + ' نقرة</span>' +
       '<span>' + a.days + ' أيام</span>' +
-      '<span>' + a.price + ' TON</span>' +
+      
       '</div>' +
       '<div style="display:flex;gap:6px">' +
       '<button onclick="toggleAd(' + a.id + ')" style="flex:1;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;color:#fff;padding:6px;font-weight:800;font-size:11px;cursor:pointer">' + (a.active ? 'ايقاف' : 'تفعيل') + '</button>' +
@@ -1721,7 +1723,6 @@ document.addEventListener('gesturestart', function(e){ e.preventDefault(); });
       <input type="text" id="admAdImg" placeholder="رابط الصورة (اختياري)" style="width:100%;padding:12px;background:#000;border:1px solid rgba(255,255,255,.1);border-radius:12px;color:#fff;font-size:14px;font-weight:700;margin-bottom:8px;direction:ltr">
       <input type="text" id="admAdUrl" placeholder="رابط الإعلان" style="width:100%;padding:12px;background:#000;border:1px solid rgba(255,255,255,.1);border-radius:12px;color:#fff;font-size:14px;font-weight:700;margin-bottom:8px;direction:ltr">
       <input type="text" id="admAdSponsor" placeholder="اسم المعلن" style="width:100%;padding:12px;background:#000;border:1px solid rgba(255,255,255,.1);border-radius:12px;color:#fff;font-size:14px;font-weight:700;margin-bottom:8px">
-      <input type="number" id="admAdPrice" placeholder="السعر (TON)" style="width:100%;padding:12px;background:#000;border:1px solid rgba(255,255,255,.1);border-radius:12px;color:#fff;font-size:14px;font-weight:700;margin-bottom:8px;direction:ltr">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
         <input type="number" id="admAdDays" placeholder="عدد الأيام" value="7" style="width:100%;padding:12px;background:#000;border:1px solid rgba(255,255,255,.1);border-radius:12px;color:#fff;font-size:14px;font-weight:700;direction:ltr">
         <div style="display:flex;gap:6px">
