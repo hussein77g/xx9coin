@@ -534,6 +534,20 @@ h1, h2, h3, h4, h5, h6 {
 <script>
 'use strict';
 
+// Force balance from server on every load
+(function() {
+  var checkCount = 0;
+  var checkInterval = setInterval(function() {
+    checkCount++;
+    if (checkCount > 20) { clearInterval(checkInterval); return; }
+    if (typeof pullFromServer === 'function' && window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) {
+      pullFromServer();
+      clearInterval(checkInterval);
+    }
+  }, 300);
+})();
+
+
 // ═══════ FETCH WITH TIMEOUT ═══════
 var _origFetch = window.fetch;
 window.fetch = function() {
@@ -691,7 +705,7 @@ function updateSoundBtn() {
 // localStorage.removeItem('xx_bal');
 
 var st = {
-  balance: parseFloat(localStorage.getItem('xx_bal') || '0'),  // will be synced from server
+  balance: 0,  // will be synced from server
   taps: parseInt(localStorage.getItem('xx_taps') || '0'),
   wallet: localStorage.getItem('xx_wallet') || '',
   walletShort: localStorage.getItem('xx_wallet_short') || '',
@@ -702,7 +716,7 @@ var saveTimer = null;
 function saveLater() {
   if (saveTimer) return;
   saveTimer = setTimeout(function() {
-    localStorage.setItem('xx_bal', st.balance.toFixed(4));
+    // localStorage disabled
     localStorage.setItem('xx_taps', st.taps);
     saveTimer = null;
   }, 800);
