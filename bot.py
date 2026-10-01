@@ -135,8 +135,27 @@ class APIHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
-        if self.path == '/':
+        if self.path == '/' or self.path == '':
             self._json(200, {"status": "ok"})
+        elif self.path == '/ads':
+            try:
+                from datetime import datetime as dt
+                conn = sqlite3.connect(DB_PATH)
+                c2 = conn.cursor()
+                now = dt.now().isoformat()
+                c2.execute("SELECT id, title, description, image_url, link_url FROM ads WHERE active = 1 AND (expires_at IS NULL OR expires_at > ?) ORDER BY id DESC LIMIT 20", (now,))
+                rows = c2.fetchall()
+                conn.close()
+                ads = []
+                for r in rows:
+                    ads.append({
+                        "id": r[0], "title": r[1], "desc": r[2] or "",
+                        "img": r[3] or "", "url": r[4] or ""
+                    })
+                self._json(200, {"ads": ads})
+            except Exception as e:
+                print(f"Ads GET error: {e}")
+                self._json(200, {"ads": []})
         else:
             self.send_response(404)
             self.end_headers()
@@ -246,6 +265,108 @@ class APIHandler(BaseHTTPRequestHandler):
                     "user_id": row[0], "username": row[1] or "", "first_name": row[2] or "",
                     "balance": row[3] or 0, "referrals": row[5] or 0, "wallet": row[6] or ""
                 }})
+
+            # ─── /admin/ads/create ───
+            elif self.path == '/admin/ads/create':
+                user = verify_telegram(data.get('initData', ''))
+                if not user or user.get('id') != OWNER_ID:
+                    self._json(403, {"error": "forbidden"})
+                    return
+                try:
+                    title = data.get('title', '').strip()
+                    desc = data.get('desc', '').strip()
+                    img = data.get('img', '').strip()
+                    url = data.get('url', '').strip()
+                    sponsor = data.get('sponsor', '').strip()
+                    price = float(data.get('price', 0))
+                    days = int(data.get('days', 7))
+                    if not title or not url or days < 1:
+                        self._json(400, {"error": "بيانات ناقصة"})
+                        return
+                    from datetime import datetime as dt, timedelta
+                    now = dt.now()
+                    expires = (now + timedelta(days=days)).isoformat()
+                    conn = sqlite3.connect(DB_PATH)
+                    c2 = conn.cursor()
+                    c2.execute("INSERT INTO ads (title, description, image_url, link_url, sponsor, price, active, days, expires_at, created_at) VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?)",
+                        (title, desc, img, url, sponsor, price, days, expires, now.isoformat()))
+                    ad_id = c2.lastrowid
+                    conn.commit()
+                    conn.close()
+                    self._json(200, {"ok": True, "ad_id": ad_id, "days": days})
+                except Exception as e:
+                    self._json(500, {"error": str(e)})
+
+            # ─── /admin/ads/list ───
+            elif self.path == '/admin/ads/list':
+                user = verify_telegram(data.get('initData', ''))
+                if not user or user.get('id') != OWNER_ID:
+                    self._json(403, {"error": "forbidden"})
+                    return
+                try:
+                    conn = sqlite3.connect(DB_PATH)
+                    c2 = conn.cursor()
+                    c2.execute("SELECT id, title, description, image_url, link_url, sponsor, price, active, days, expires_at, clicks, created_at FROM ads ORDER BY id DESC LIMIT 50")
+                    rows = c2.fetchall()
+                    conn.close()
+                    ads = []
+                    for r in rows:
+                        ads.append({
+                            "id": r[0], "title": r[1], "desc": r[2] or "", "img": r[3] or "",
+                            "url": r[4] or "", "sponsor": r[5] or "", "price": r[6] or 0,
+                            "active": r[7], "days": r[8], "expires_at": r[9],
+                            "clicks": r[10] or 0, "created_at": r[11]
+                        })
+                    self._json(200, {"ads": ads})
+                except Exception as e:
+                    self._json(500, {"error": str(e)})
+
+            # ─── /admin/ads/delete ───
+            elif self.path == '/admin/ads/delete':
+                user = verify_telegram(data.get('initData', ''))
+                if not user or user.get('id') != OWNER_ID:
+                    self._json(403, {"error": "forbidden"})
+                    return
+                try:
+                    ad_id = int(data.get('ad_id', 0))
+                    conn = sqlite3.connect(DB_PATH)
+                    c2 = conn.cursor()
+                    c2.execute("DELETE FROM ads WHERE id = ?", (ad_id,))
+                    conn.commit()
+                    conn.close()
+                    self._json(200, {"ok": True})
+                except Exception as e:
+                    self._json(500, {"error": str(e)})
+
+            # ─── /admin/ads/toggle ───
+            elif self.path == '/admin/ads/toggle':
+                user = verify_telegram(data.get('initData', ''))
+                if not user or user.get('id') != OWNER_ID:
+                    self._json(403, {"error": "forbidden"})
+                    return
+                try:
+                    ad_id = int(data.get('ad_id', 0))
+                    conn = sqlite3.connect(DB_PATH)
+                    c2 = conn.cursor()
+                    c2.execute("UPDATE ads SET active = CASE WHEN active = 1 THEN 0 ELSE 1 END WHERE id = ?", (ad_id,))
+                    conn.commit()
+                    conn.close()
+                    self._json(200, {"ok": True})
+                except Exception as e:
+                    self._json(500, {"error": str(e)})
+
+            # ─── /ad/click ───
+            elif self.path == '/ad/click':
+                try:
+                    ad_id = int(data.get('ad_id', 0))
+                    conn = sqlite3.connect(DB_PATH)
+                    c2 = conn.cursor()
+                    c2.execute("UPDATE ads SET clicks = clicks + 1 WHERE id = ?", (ad_id,))
+                    conn.commit()
+                    conn.close()
+                except:
+                    pass
+                self._json(200, {"ok": True})
 
             else:
                 self.send_response(404)

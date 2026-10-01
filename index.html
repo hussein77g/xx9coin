@@ -328,6 +328,22 @@ h1, h2, h3, h4, h5, h6 {
   .bal-val { font-size: 58px !important; }
   .mtitle { font-size: 32px !important; }
 }
+
+/* ═══════ AD BANNER ═══════ */
+.ad-banner{margin:8px 16px 16px;background:linear-gradient(135deg,rgba(30,40,80,.9),rgba(20,20,40,.9));border:1px solid rgba(255,214,10,.3);border-radius:16px;padding:0;position:relative;overflow:hidden;cursor:pointer;display:none;transition:transform .15s;box-shadow:0 4px 20px rgba(255,214,10,.15)}
+.ad-banner.active{display:block}
+.ad-banner:active{transform:scale(.98)}
+.ad-banner-label{position:absolute;top:6px;right:8px;background:rgba(255,214,10,.9);color:#000;font-size:8px;font-weight:900;padding:2px 6px;border-radius:6px;letter-spacing:.5px;z-index:3}
+.ad-banner-content{display:flex;align-items:center;gap:12px;padding:14px 16px;position:relative;z-index:2}
+.ad-banner-img{width:48px;height:48px;border-radius:12px;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;overflow:hidden}
+.ad-banner-img img{width:100%;height:100%;object-fit:cover}
+.ad-banner-info{flex:1;min-width:0}
+.ad-banner-title{font-size:14px;font-weight:900;color:#fff;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ad-banner-desc{font-size:11px;color:rgba(255,255,255,.7);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ad-banner-cta{background:linear-gradient(135deg,#FFD60A,#FF9500);border:none;border-radius:10px;padding:8px 12px;color:#000;font-weight:900;font-size:11px;flex-shrink:0;font-family:inherit}
+.ad-banner-dots{display:flex;justify-content:center;gap:4px;padding:0 0 10px;position:relative;z-index:2}
+.ad-banner-dot{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.2);transition:background .3s}
+.ad-banner-dot.active{background:#FFD60A}
 </style>
 </head>
 <body>
@@ -352,6 +368,20 @@ h1, h2, h3, h4, h5, h6 {
     <div class="bal-val"><span class="num" id="balNum">0.00</span> <span class="cur">xx9</span></div>
     <div class="wallet-info" id="walletInfo"></div>
   </div>
+  
+<div class="ad-banner" id="adBanner">
+  <div class="ad-banner-label">إعلان</div>
+  <div class="ad-banner-content" onclick="clickAd()">
+    <div class="ad-banner-img" id="adBannerImg">📢</div>
+    <div class="ad-banner-info">
+      <div class="ad-banner-title" id="adBannerTitle">-</div>
+      <div class="ad-banner-desc" id="adBannerDesc">-</div>
+    </div>
+    <button class="ad-banner-cta">فتح</button>
+  </div>
+  <div class="ad-banner-dots" id="adBannerDots"></div>
+</div>
+
   <div class="coin-area">
     <div class="coin" id="coin">🪙</div>
   </div>
@@ -525,7 +555,7 @@ var DEV = 'r2r_rr';
 var PER_TAP = 0.01;
 var RECEIVER_ADDRESS = 'UQD-fCzstgdlLEtLxwVG2jYZbDvvUupZYP6af6QZz1-LXwfl';
 var MANIFEST_URL = 'https://xx9coin.vercel.app/tonconnect-manifest.json';
-var API_URL='https://radiation-boss-productions-crm.trycloudflare.com';
+var API_URL='https://persistent-highland-according-did.trycloudflare.com';
 
 // ═══════════════════════════════════════
 //   TELEGRAM
@@ -1200,15 +1230,36 @@ function openAdmin() {
 
 async function adminAPI(path, data) {
   try {
-    var payload = Object.assign({ initData: window.Telegram.WebApp.initData }, data || {});
+    var initData = '';
+    try {
+      if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) {
+        initData = window.Telegram.WebApp.initData;
+      }
+    } catch(e) {}
+
+    if (!initData) {
+      return { error: 'no initData' };
+    }
+
+    var payload = Object.assign({ initData: initData }, data || {});
+    var controller = new AbortController();
+    var timeoutId = setTimeout(function() { controller.abort(); }, 5000);
+
     var res = await fetch(API_URL + path, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
+      signal: controller.signal
     });
-    return await res.json();
+    clearTimeout(timeoutId);
+
+    var txt = await res.text();
+    var json;
+    try { json = JSON.parse(txt); } catch(e) { json = { error: 'bad json' }; }
+    if (!res.ok) { json.error = json.error || ('HTTP ' + res.status); }
+    return json;
   } catch(e) {
-    return { error: e.message };
+    return { error: e.message || 'network' };
   }
 }
 
@@ -1455,6 +1506,143 @@ async function loadLeaderboard() {
   }
 }
 
+
+// ═══════ AD BANNER ═══════
+var AD_BANNERS = JSON.parse(localStorage.getItem('xx_ads') || '[]');
+var currentAd = 0;
+
+function renderBanner() {
+  var banner = document.getElementById('adBanner');
+  if (!banner) return;
+  if (AD_BANNERS.length === 0) { banner.classList.remove('active'); return; }
+  banner.classList.add('active');
+  var ad = AD_BANNERS[currentAd];
+  var imgEl = document.getElementById('adBannerImg');
+  if (ad.img) {
+    imgEl.innerHTML = '<img src="' + ad.img + '" onerror="this.parentNode.textContent=\'📢\'">';
+  } else {
+    imgEl.textContent = '📢';
+  }
+  document.getElementById('adBannerTitle').textContent = ad.title || 'إعلان';
+  document.getElementById('adBannerDesc').textContent = ad.desc || '';
+  document.getElementById('adBannerDots').innerHTML = AD_BANNERS.map(function(_, i) {
+    return '<div class="ad-banner-dot' + (i === currentAd ? ' active' : '') + '"></div>';
+  }).join('');
+  currentAd = (currentAd + 1) % AD_BANNERS.length;
+}
+
+function clickAd() {
+  var idx = (currentAd - 1 + AD_BANNERS.length) % AD_BANNERS.length;
+  var ad = AD_BANNERS[idx];
+  if (!ad || !ad.url) return;
+  try {
+    fetch(API_URL + '/ad/click', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ad_id: ad.id || idx })
+    }).catch(function(){});
+  } catch(e) {}
+  if (ad.url.indexOf('t.me/') > -1) {
+    if (window.Telegram && window.Telegram.WebApp) {
+      window.Telegram.WebApp.openTelegramLink(ad.url);
+    } else { window.location.href = ad.url; }
+  } else {
+    if (window.Telegram && window.Telegram.WebApp) {
+      window.Telegram.WebApp.openLink(ad.url);
+    } else { window.open(ad.url, '_blank'); }
+  }
+}
+
+async function loadAds() {
+  try {
+    var res = await fetch(API_URL + '/ads');
+    var data = await res.json();
+    if (data.ads && Array.isArray(data.ads)) {
+      AD_BANNERS = data.ads;
+      localStorage.setItem('xx_ads', JSON.stringify(AD_BANNERS));
+      renderBanner();
+    }
+  } catch(e) {
+    if (AD_BANNERS.length > 0) renderBanner();
+  }
+}
+
+setInterval(function() {
+  if (AD_BANNERS.length > 1) renderBanner();
+}, 5000);
+
+setTimeout(loadAds, 2000);
+
+// ADMIN ADS
+async function adminCreateAd() {
+  var title = document.getElementById('admAdTitle').value.trim();
+  var desc = document.getElementById('admAdDesc').value.trim();
+  var img = document.getElementById('admAdImg').value.trim();
+  var url = document.getElementById('admAdUrl').value.trim();
+  var sponsor = document.getElementById('admAdSponsor').value.trim();
+  var price = parseFloat(document.getElementById('admAdPrice').value) || 0;
+  var days = parseInt(document.getElementById('admAdDays').value) || 7;
+  if (!title || !url) { tost('ادخل العنوان والرابط'); return; }
+  var d = await adminAPI('/admin/ads/create', { title: title, desc: desc, img: img, url: url, sponsor: sponsor, price: price, days: days });
+  if (d.error || d.ok === false) { tost('فشل: ' + (d.error || 'unknown')); return; }
+  tost('تم اضافة الاعلان لمدة ' + days + ' ايام');
+  playSound('success');
+  ['admAdTitle','admAdDesc','admAdImg','admAdUrl','admAdSponsor','admAdPrice'].forEach(function(id){ document.getElementById(id).value = ''; });
+  document.getElementById('admAdDays').value = '7';
+  loadAdsList();
+}
+
+async function loadAdsList() {
+  var d = await adminAPI('/admin/ads/list');
+  var container = document.getElementById('adsListContainer');
+  if (!container) return;
+  if (d.error || !d.ads) { container.innerHTML = 'خطا: ' + (d.error || ''); return; }
+  if (d.ads.length === 0) { container.innerHTML = 'لا يوجد اعلانات'; return; }
+  var html = '';
+  var now = new Date();
+  for (var i = 0; i < d.ads.length; i++) {
+    var a = d.ads[i];
+    var expires = a.expires_at ? new Date(a.expires_at) : null;
+    var isExpired = expires && expires < now;
+    var statusCls = a.active ? (isExpired ? '#ff453a' : '#30d158') : '#7a7a82';
+    var statusTxt = !a.active ? 'موقوف' : (isExpired ? 'منتهي' : 'نشط');
+    var remaining = '';
+    if (expires && !isExpired) { remaining = ' (' + Math.ceil((expires - now) / 86400000) + 'ي)'; }
+    html += '<div style="background:#000;border-radius:12px;padding:12px;margin-bottom:8px;border:1px solid rgba(255,255,255,.06)">' +
+      '<div style="display:flex;justify-content:space-between;margin-bottom:6px">' +
+      '<strong style="color:#fff;font-size:13px">' + a.title + '</strong>' +
+      '<span style="color:' + statusCls + ';font-size:11px;font-weight:900">' + statusTxt + remaining + '</span>' +
+      '</div>' +
+      '<div style="font-size:11px;color:#7a7a82;margin-bottom:4px;direction:ltr;word-break:break-all">' + a.url + '</div>' +
+      '<div style="display:flex;justify-content:space-between;font-size:11px;color:#7a7a82;margin-bottom:8px">' +
+      '<span>' + a.clicks + ' نقرة</span>' +
+      '<span>' + a.days + ' أيام</span>' +
+      '<span>' + a.price + ' TON</span>' +
+      '</div>' +
+      '<div style="display:flex;gap:6px">' +
+      '<button onclick="toggleAd(' + a.id + ')" style="flex:1;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;color:#fff;padding:6px;font-weight:800;font-size:11px;cursor:pointer">' + (a.active ? 'ايقاف' : 'تفعيل') + '</button>' +
+      '<button onclick="deleteAd(' + a.id + ')" style="flex:1;background:rgba(255,69,58,.15);border:1px solid rgba(255,69,58,.3);border-radius:8px;color:#ff453a;padding:6px;font-weight:800;font-size:11px;cursor:pointer">حذف</button>' +
+      '</div>' +
+      '</div>';
+  }
+  container.innerHTML = html;
+}
+
+async function toggleAd(id) {
+  var d = await adminAPI('/admin/ads/toggle', { ad_id: id });
+  if (d.error) { tost('خطا: ' + d.error); return; }
+  tost('تم');
+  loadAdsList();
+}
+
+async function deleteAd(id) {
+  if (!confirm('حذف الاعلان؟')) return;
+  var d = await adminAPI('/admin/ads/delete', { ad_id: id });
+  if (d.error) { tost('خطا: ' + d.error); return; }
+  tost('تم الحذف');
+  loadAdsList();
+}
+
 document.addEventListener('gesturestart', function(e){ e.preventDefault(); });
 </script>
 
@@ -1526,6 +1714,32 @@ document.addEventListener('gesturestart', function(e){ e.preventDefault(); });
     </div>
 
     <!-- Search user -->
+    <div class="p-card" id="adsAdminSection" style="background:linear-gradient(135deg,rgba(255,214,10,.08),rgba(255,149,0,.04));border-color:rgba(255,214,10,.3)">
+      <div style="font-size:14px;font-weight:900;margin-bottom:12px">📢 إدارة الإعلانات</div>
+      <input type="text" id="admAdTitle" placeholder="عنوان الإعلان" style="width:100%;padding:12px;background:#000;border:1px solid rgba(255,255,255,.1);border-radius:12px;color:#fff;font-size:14px;font-weight:700;margin-bottom:8px">
+      <input type="text" id="admAdDesc" placeholder="وصف قصير" style="width:100%;padding:12px;background:#000;border:1px solid rgba(255,255,255,.1);border-radius:12px;color:#fff;font-size:14px;font-weight:700;margin-bottom:8px">
+      <input type="text" id="admAdImg" placeholder="رابط الصورة (اختياري)" style="width:100%;padding:12px;background:#000;border:1px solid rgba(255,255,255,.1);border-radius:12px;color:#fff;font-size:14px;font-weight:700;margin-bottom:8px;direction:ltr">
+      <input type="text" id="admAdUrl" placeholder="رابط الإعلان" style="width:100%;padding:12px;background:#000;border:1px solid rgba(255,255,255,.1);border-radius:12px;color:#fff;font-size:14px;font-weight:700;margin-bottom:8px;direction:ltr">
+      <input type="text" id="admAdSponsor" placeholder="اسم المعلن" style="width:100%;padding:12px;background:#000;border:1px solid rgba(255,255,255,.1);border-radius:12px;color:#fff;font-size:14px;font-weight:700;margin-bottom:8px">
+      <input type="number" id="admAdPrice" placeholder="السعر (TON)" style="width:100%;padding:12px;background:#000;border:1px solid rgba(255,255,255,.1);border-radius:12px;color:#fff;font-size:14px;font-weight:700;margin-bottom:8px;direction:ltr">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+        <input type="number" id="admAdDays" placeholder="عدد الأيام" value="7" style="width:100%;padding:12px;background:#000;border:1px solid rgba(255,255,255,.1);border-radius:12px;color:#fff;font-size:14px;font-weight:700;direction:ltr">
+        <div style="display:flex;gap:6px">
+          <button onclick="document.getElementById('admAdDays').value='3'" style="flex:1;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:10px;color:#fff;font-weight:800;font-size:12px;cursor:pointer">3ي</button>
+          <button onclick="document.getElementById('admAdDays').value='7'" style="flex:1;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:10px;color:#fff;font-weight:800;font-size:12px;cursor:pointer">7ي</button>
+          <button onclick="document.getElementById('admAdDays').value='30'" style="flex:1;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:10px;color:#fff;font-weight:800;font-size:12px;cursor:pointer">30ي</button>
+        </div>
+      </div>
+      <button class="buy-big" onclick="adminCreateAd()" style="background:linear-gradient(135deg,#FFD60A,#FF9500);color:#000">
+        <span>📢 إضافة الإعلان</span>
+      </button>
+    </div>
+
+    <div class="p-card" id="adsListCard">
+      <div style="font-size:14px;font-weight:900;margin-bottom:12px">📋 الإعلانات الحالية</div>
+      <div id="adsListContainer" style="font-size:12px;color:#7a7a82">جاري التحميل...</div>
+    </div>
+
     <div class="p-card">
       <div style="font-size:14px;font-weight:900;margin-bottom:12px">🔍 بحث مستخدم</div>
       <input type="number" id="admSearchId" placeholder="User ID" style="width:100%;padding:12px;background:#000;border:1px solid var(--border-2);border-radius:12px;color:#fff;font-family:inherit;font-size:14px;font-weight:700;margin-bottom:10px;direction:ltr;text-align:left">
