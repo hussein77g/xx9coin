@@ -41,6 +41,22 @@ def init_db():
             updated_at TEXT
         )
     """)
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS ads (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT,
+            description TEXT,
+            image_url TEXT,
+            link_url TEXT,
+            sponsor TEXT,
+            price REAL DEFAULT 0,
+            active INTEGER DEFAULT 1,
+            days INTEGER DEFAULT 7,
+            expires_at TEXT,
+            clicks INTEGER DEFAULT 0,
+            created_at TEXT
+        )
+    """)
     conn.commit()
     conn.close()
 
@@ -413,25 +429,25 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             try:
                 await context.bot.send_message(
                     chat_id=referrer_id,
-                    text=f"🎉 صديق جديد انضم!\n💰 +5 xx9\n👤 {fn}"
+                    text=f"صديق جديد انضم من رابطك!\n+5 xx9\n{fn}"
                 )
             except:
                 pass
 
-    row = get_user(uid)
-    balance = row[3] if row else 0
-    refs = row[5] if row else 0
+    buttons = [[InlineKeyboardButton("🚀 افتح البوت", web_app=WebAppInfo(url=WEBAPP_URL))]]
 
-    kb = InlineKeyboardMarkup([
-        [InlineKeyboardButton("🚀 العب الآن", web_app=WebAppInfo(url=WEBAPP_URL))],
-        [InlineKeyboardButton("👥 دعوة أصدقاء", callback_data="invite")],
-        [InlineKeyboardButton("📊 إحصائياتي", callback_data="stats")]
-    ])
+    # Add admin button for owner only
+    if uid == OWNER_ID:
+        buttons.append([InlineKeyboardButton("👑 لوحة التحكم", web_app=WebAppInfo(url=WEBAPP_URL + "?admin=1"))])
+
+    kb = InlineKeyboardMarkup(buttons)
 
     await update.message.reply_text(
-        f"🎮 أهلاً {fn}!\n\n💰 رصيدك: {balance:.2f} xx9\n👥 أصدقاؤك: {refs}",
+        f"اهلا {fn}!",
         reply_markup=kb
     )
+
+
 
 async def cmd_balance(update: Update, context: ContextTypes.DEFAULT_TYPE):
     row = get_user(update.effective_user.id)
