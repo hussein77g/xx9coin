@@ -1261,7 +1261,17 @@ async function adminAPI(path, data) {
 
 async function loadAdminStats() {
   var d = await adminAPI('/admin/stats');
-  if (d.error) { tost('❌ خطأ في التحميل'); return; }
+  if (d.error) {
+    var hasInit = false;
+    try {
+      hasInit = !!(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData);
+    } catch(e) {}
+    document.getElementById('admUsers').textContent = hasInit ? '⚠️ ' + d.error : '❌ no initData';
+    document.getElementById('admBalance').textContent = '⚠️';
+    document.getElementById('admRefs').textContent = '⚠️';
+    console.log('Admin error:', d, 'hasInit:', hasInit);
+    return;
+  }
   document.getElementById('admUsers').textContent = d.users || 0;
   document.getElementById('admBalance').textContent = (d.total_balance || 0).toFixed(2) + ' xx9';
   document.getElementById('admRefs').textContent = d.referrals || 0;
