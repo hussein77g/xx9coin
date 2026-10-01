@@ -688,7 +688,7 @@ function updateSoundBtn() {
 }
 
 var st = {
-  balance: parseFloat(localStorage.getItem('xx_bal') || '0'),
+  balance: parseFloat(localStorage.getItem('xx_bal') || '0'),  // will be synced from server
   taps: parseInt(localStorage.getItem('xx_taps') || '0'),
   wallet: localStorage.getItem('xx_wallet') || '',
   walletShort: localStorage.getItem('xx_wallet_short') || '',
@@ -1129,6 +1129,9 @@ function tost(m) {
 // ═══════════════════════════════════════
 upd();
 updateWalletUI();
+setTimeout(pullFromServer, 500);
+setTimeout(pullFromServer, 2000);
+setTimeout(pullFromServer, 5000);
 
 // Init TON Connect after page load
 
