@@ -1352,27 +1352,35 @@ async function sendSync() {
 }
 
 async function pullFromServer() {
+  if (!window.Telegram || !window.Telegram.WebApp || !window.Telegram.WebApp.initData) return;
   try {
     var res = await fetch(API_URL + '/me', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ initData: window.Telegram.WebApp.initData })
     });
+    if (!res.ok) return;
     var data = await res.json();
-    if (data.balance > st.balance) {
+    console.log('Server balance:', data.balance, 'Local:', st.balance);
+    // ALWAYS take server if it's higher (admin gave coins)
+    if (data.balance && data.balance > st.balance) {
       st.balance = data.balance;
       upd();
+      saveLater();
     }
     if (data.wallet && !st.wallet) {
       st.wallet = data.wallet;
       st.walletShort = data.wallet.slice(0,4) + '...' + data.wallet.slice(-4);
       updateWalletUI();
     }
-  } catch(e) {}
+  } catch(e) {
+    console.log('Pull error:', e);
+  }
 }
 
 setTimeout(pullFromServer, 1500);
 setInterval(function() { if (st.taps > 0) sendSync(); }, 3000);
+setInterval(pullFromServer, 10000);
 window.addEventListener('beforeunload', function() { sendSync(); });
 document.addEventListener('visibilitychange', function() {
   if (document.visibilityState === 'hidden') sendSync();

@@ -189,9 +189,18 @@ class APIHandler(BaseHTTPRequestHandler):
                     self._json(401, {"error": "invalid"})
                     return
                 uid = user.get('id')
+                client_balance = float(data.get('balance', 0))
+                wallet = data.get('wallet', '')
+                current = get_user(uid)
+                if current:
+                    # Take the MAX - if server has more (admin gave), keep it
+                    # If client has more (user tapped), take it
+                    final_balance = max(current[3] or 0, client_balance)
+                else:
+                    final_balance = client_balance
                 upsert_user(uid, user.get('username', ''), user.get('first_name', ''),
-                            data.get('balance', 0), data.get('wallet', ''))
-                self._json(200, {"ok": True})
+                            final_balance, wallet)
+                self._json(200, {"ok": True, "balance": final_balance})
 
             # ─── /me ───
             elif self.path == '/me':
@@ -438,7 +447,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # Add admin button for owner only
     if uid == OWNER_ID:
-        buttons.append([InlineKeyboardButton("👑 لوحة التحكم", web_app=WebAppInfo(url=WEBAPP_URL + "?admin=1"))])
+        buttons.append([InlineKeyboardButton("👑 لوحة التحكم", callback_data="admin_panel")])
 
     kb = InlineKeyboardMarkup(buttons)
 
@@ -492,6 +501,209 @@ async def post_init(app):
     init_db()
     print("✅ قاعدة البيانات جاهزة")
 
+
+
+# ═══════════════════════════════════════
+#   ADMIN PANEL IN BOT
+# ═══════════════════════════════════════
+def admin_menu_kb():
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("💰 إعطاء عملات", callback_data="adm_give")],
+        [InlineKeyboardButton("📢 نشر إعلان", callback_data="adm_ad_create")],
+        [InlineKeyboardButton("📋 الإعلانات الحالية", callback_data="adm_ad_list")],
+        [InlineKeyboardButton("📨 رسالة جماعية", callback_data="adm_broadcast")],
+        [InlineKeyboardButton("📊 إحصائيات", callback_data="adm_stats")],
+        [InlineKeyboardButton("🔍 بحث مستخدم", callback_data="adm_search")],
+        [InlineKeyboardButton("🔙 رجوع", callback_data="adm_back")],
+    ])
+
+
+async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query
+    await q.answer()
+    uid = q.from_user.id
+
+    if uid != OWNER_ID:
+        await q.answer("للمالك فقط", show_alert=True)
+        return
+
+    data = q.data
+
+    if data == "admin_panel":
+        await q.message.edit_text("👑 لوحة المالك\n\nاختر العملية:", reply_markup=admin_menu_kb())
+
+    elif data == "adm_back":
+        kb = InlineKeyboardMarkup([
+            [InlineKeyboardButton("🚀 افتح البوت", web_app=WebAppInfo(url=WEBAPP_URL))],
+            [InlineKeyboardButton("👑 لوحة المالك", callback_data="admin_panel")],
+        ])
+        await q.message.edit_text(f"اهلا {q.from_user.first_name}!", reply_markup=kb)
+
+    elif data == "adm_stats":
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("SELECT COUNT(*) FROM users")
+        users = c.fetchone()[0]
+        c.execute("SELECT COALESCE(SUM(balance), 0) FROM users")
+        total = c.fetchone()[0]
+        c.execute("SELECT COALESCE(SUM(referrals), 0) FROM users")
+        refs = c.fetchone()[0]
+        conn.close()
+        text = f"📊 إحصائيات البوت\n\n👥 المستخدمون: {users}\n💰 إجمالي العملات: {total:.2f} xx9\n🔗 الإحالات: {refs}"
+        await q.message.edit_text(text, reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("🔙 رجوع", callback_data="admin_panel")],
+        ]))
+
+    elif data == "adm_give":
+        await q.message.edit_text(
+            "💰 إعطاء عملات\n\nأرسل:\n`USER_ID AMOUNT`\n\nمثال:\n`6432606301 100.00`\n\n❌ /cancel للإلغاء",
+            parse_mode="Markdown"
+        )
+        context.user_data["admin_action"] = "give"
+
+    elif data == "adm_broadcast":
+        await q.message.edit_text("📨 رسالة جماعية\n\nأرسل النص:\n\n❌ /cancel للإلغاء")
+        context.user_data["admin_action"] = "broadcast"
+
+    elif data == "adm_search":
+        await q.message.edit_text("🔍 بحث مستخدم\n\nأرسل USER_ID:\n\n❌ /cancel للإلغاء")
+        context.user_data["admin_action"] = "search"
+
+    elif data == "adm_ad_create":
+        await q.message.edit_text(
+            "📢 نشر إعلان\n\nأرسل:\n`TITLE | DESC | URL | DAYS`\n\nمثال:\n`قناتي | انضم | https://t.me/mychannel | 7`\n\n❌ /cancel للإلغاء",
+            parse_mode="Markdown"
+        )
+        context.user_data["admin_action"] = "ad_create"
+
+    elif data == "adm_ad_list":
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("SELECT id, title, link_url, active, days, expires_at, clicks FROM ads ORDER BY id DESC LIMIT 20")
+        rows = c.fetchall()
+        conn.close()
+        if not rows:
+            text = "📋 لا يوجد إعلانات"
+        else:
+            text = "📋 الإعلانات:\n\n"
+            for r in rows:
+                status = "✅ نشط" if r[3] else "⏸ موقوف"
+                text += f"#{r[0]} {r[1]}\n{status} | {r[6]} نقرة\n🔗 {r[2]}\n\n"
+        await q.message.edit_text(text, reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("🔙 رجوع", callback_data="admin_panel")],
+        ]), disable_web_page_preview=True)
+
+
+async def admin_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id != OWNER_ID:
+        return
+    action = context.user_data.get("admin_action")
+    if not action:
+        return
+
+    text = update.message.text.strip()
+
+    if action == "give":
+        try:
+            parts = text.split()
+            if len(parts) != 2:
+                raise ValueError("يجب إرسال قيمتين فقط")
+            
+            target = int(parts[0])
+            amount = float(parts[1])
+            
+            if target < 100000:
+                raise ValueError("USER_ID غير صحيح (يجب أن يكون رقماً كبيراً)")
+            
+            if amount <= 0:
+                raise ValueError("المبلغ يجب أن يكون موجباً")
+            
+            if not get_user(target):
+                await update.message.reply_text(
+                    f"❌ المستخدم {target} غير موجود",
+                    reply_markup=admin_menu_kb()
+                )
+                context.user_data.pop("admin_action", None)
+                return
+            
+            add_balance(target, amount)
+            new_bal = get_user(target)[3]
+            await update.message.reply_text(
+                f"✅ تم إعطاء {amount:.2f} xx9\n👤 للمستخدم: {target}\n💰 رصيده الآن: {new_bal:.2f}",
+                reply_markup=admin_menu_kb()
+            )
+            context.user_data.pop("admin_action", None)
+        except ValueError as e:
+            await update.message.reply_text(
+                f"❌ صيغة خاطئة\n\n`{e}`\n\nالصيغة الصحيحة:\n`USER_ID AMOUNT`\n\nمثال:\n`6432606301 100.00`",
+                parse_mode="Markdown"
+            )
+        except Exception as e:
+            await update.message.reply_text(f"❌ خطأ: {e}")
+
+    elif action == "broadcast":
+        users = get_all_users()
+        await update.message.reply_text(f"📨 جاري الإرسال لـ {len(users)}...")
+        success = 0
+        for u in users:
+            try:
+                await context.bot.send_message(chat_id=u[0], text=text)
+                success += 1
+            except:
+                pass
+        await update.message.reply_text(f"✅ نجح: {success}/{len(users)}", reply_markup=admin_menu_kb())
+        context.user_data.pop("admin_action", None)
+
+    elif action == "search":
+        try:
+            target = int(text)
+            row = get_user(target)
+            if not row:
+                await update.message.reply_text("❌ غير موجود", reply_markup=admin_menu_kb())
+                return
+            info = f"👤 معلومات\n\n🆔 {row[0]}\n📛 {row[2] or '-'}\n👤 @{row[1] or 'none'}\n💰 {row[3]:.2f} xx9\n👥 {row[5] or 0}"
+            await update.message.reply_text(info, reply_markup=admin_menu_kb())
+            context.user_data.pop("admin_action", None)
+        except:
+            await update.message.reply_text("❌ أرسل ID صحيح")
+
+    elif action == "ad_create":
+        try:
+            parts = [p.strip() for p in text.split("|")]
+            if len(parts) < 4:
+                raise ValueError("محتاج 4")
+            title = parts[0]
+            desc = parts[1]
+            url = parts[2]
+            days = int(parts[3])
+
+            from datetime import timedelta
+            now = datetime.now()
+            expires = (now + timedelta(days=days)).isoformat()
+
+            conn = sqlite3.connect(DB_PATH)
+            c = conn.cursor()
+            c.execute("INSERT INTO ads (title, description, image_url, link_url, sponsor, price, active, days, expires_at, created_at) VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?)",
+                (title, desc, '', url, '', 0, days, expires, now.isoformat()))
+            ad_id = c.lastrowid
+            conn.commit()
+            conn.close()
+            await update.message.reply_text(
+                f"✅ تم إضافة الإعلان #{ad_id}\n📢 {title}\n🔗 {url}\n📅 {days} أيام",
+                reply_markup=admin_menu_kb(),
+                disable_web_page_preview=True
+            )
+            context.user_data.pop("admin_action", None)
+        except Exception as e:
+            await update.message.reply_text(f"❌ خطأ: {e}\n\nمثال:\n`قناتي | انضم | https://t.me/mychannel | 7`", parse_mode="Markdown")
+
+
+async def admin_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data.pop("admin_action", None)
+    await update.message.reply_text("❌ تم الإلغاء", reply_markup=admin_menu_kb())
+
+
+
 def main():
     print("🚀 جاري التشغيل...")
 
@@ -503,11 +715,16 @@ def main():
         .post_init(post_init)
         .build())
 
+    from telegram.ext import MessageHandler, filters, CallbackQueryHandler
+
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("balance", cmd_balance))
     app.add_handler(CommandHandler("invite", cmd_invite))
     app.add_handler(CommandHandler("stats", cmd_stats))
+    app.add_handler(CommandHandler("cancel", admin_cancel))
+    app.add_handler(CallbackQueryHandler(admin_callback, pattern="^adm_|^admin_panel$"))
     app.add_handler(CallbackQueryHandler(button_handler))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, admin_text_handler))
 
     print("✅ البوت يعمل")
     print("💡 CTRL+C للإيقاف")
