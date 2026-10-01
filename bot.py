@@ -5,7 +5,7 @@ import asyncio
 import hashlib
 import hmac
 import threading
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from urllib.parse import parse_qsl
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
@@ -504,15 +504,64 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if row:
             await q.message.reply_text(f"💰 {row[3]:.2f} xx9\n👥 {row[5] or 0} أصدقاء")
 
+
+
+async def auto_delete_expired_ads(app):
+    """حذف تلقائي للإعلانات المنتهية - كل 60 ثانية"""
+    while True:
+        try:
+            await asyncio.sleep(60)
+            
+            # Baghdad timezone
+            BAGHDAD_TZ = timezone(timedelta(hours=3))
+            now = datetime.now(BAGHDAD_TZ)
+            
+            conn = sqlite3.connect(DB_PATH)
+            c = conn.cursor()
+            
+            # Get expired ads first (for logging)
+            c.execute("SELECT id, title, expires_at FROM ads WHERE expires_at IS NOT NULL AND expires_at < ?", (now.isoformat(),))
+            expired = c.fetchall()
+            
+            if expired:
+                for ad in expired:
+                    print(f"🗑 حذف إعلان منتهي #{ad[0]}: {ad[1]}")
+                
+                # Delete them
+                c.execute("DELETE FROM ads WHERE expires_at IS NOT NULL AND expires_at < ?", (now.isoformat(),))
+                deleted = c.rowcount
+                conn.commit()
+                print(f"✅ تم حذف {deleted} إعلان منتهي")
+            
+            conn.close()
+        except Exception as e:
+            print(f"Auto-delete error: {e}")
+
 async def post_init(app):
     init_db()
     print("✅ قاعدة البيانات جاهزة")
+    asyncio.create_task(auto_delete_expired_ads(app))
+    print("🗑 حذف تلقائي للإعلانات المنتهية كل دقيقة")
 
 
 
 # ═══════════════════════════════════════
 #   ADMIN PANEL IN BOT
 # ═══════════════════════════════════════
+
+
+def format_baghdad_time(dt):
+    """Format time in Baghdad style: 12 صباحاً / 3 مساءً"""
+    hour = dt.hour % 12
+    if hour == 0:
+        hour = 12
+    minute = dt.minute
+    period = "صباحاً" if dt.hour < 12 else "مساءً"
+    day = dt.day
+    month = dt.month
+    year = dt.year
+    return f"{hour}:{minute:02d} {period} — {day}/{month}/{year}"
+
 def admin_menu_kb():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("💰 إعطاء عملات", callback_data="adm_give")],
@@ -556,8 +605,38 @@ async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         c.execute("SELECT COALESCE(SUM(referrals), 0) FROM users")
         refs = c.fetchone()[0]
         conn.close()
-        text = f"📊 إحصائيات البوت\n\n👥 المستخدمون: {users}\n💰 إجمالي العملات: {total:.2f} xx9\n🔗 الإحالات: {refs}"
+        BAGHDAD_TZ = timezone(timedelta(hours=3))
+        now = datetime.now(BAGHDAD_TZ)
+        day_ago = now - timedelta(hours=24)
+
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("SELECT COUNT(*) FROM users")
+        users = c.fetchone()[0]
+        c.execute("SELECT COUNT(*) FROM users WHERE updated_at > ?", (day_ago.isoformat(),))
+        active = c.fetchone()[0]
+        c.execute("SELECT COALESCE(SUM(referrals), 0) FROM users")
+        refs = c.fetchone()[0]
+        c.execute("SELECT COUNT(*) FROM ads WHERE active = 1 AND (expires_at IS NULL OR expires_at > ?)", (now.isoformat(),))
+        ads = c.fetchone()[0]
+        conn.close()
+
+        # Timestamp for refresh
+        hour = now.hour % 12
+        if hour == 0: hour = 12
+        period = "ص" if now.hour < 12 else "م"
+        time_str = f"{hour}:{now.minute:02d}:{now.second:02d} {period}"
+
+        text = (
+            f"📊 إحصائيات البوت\n\n"
+            f"👥 المستخدمون: {users:,}\n"
+            f"🟢 النشطون (24 ساعة): {active:,}\n"
+            f"🔗 إجمالي الإحالات: {refs:,}\n"
+            f"📢 الإعلانات النشطة: {ads}\n\n"
+            f"🕒 آخر تحديث: {time_str}"
+        )
         await q.message.edit_text(text, reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("🔄 تحديث", callback_data="adm_stats")],
             [InlineKeyboardButton("🔙 رجوع", callback_data="admin_panel")],
         ]))
 
@@ -578,10 +657,12 @@ async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif data == "adm_ad_create":
         await q.message.edit_text(
-            "📢 نشر إعلان\n\nأرسل:\n`TITLE | DESC | URL | DAYS`\n\nمثال:\n`قناتي | انضم | https://t.me/mychannel | 7`\n\n❌ /cancel للإلغاء",
-            parse_mode="Markdown"
+            "📢 نشر إعلان جديد\n\n"
+            "🟢 الخطوة 1 من 4\n\n"
+            "أرسل اسم القناة / المشروع:\n\n"
+            "❌ /cancel للإلغاء"
         )
-        context.user_data["admin_action"] = "ad_create"
+        context.user_data["admin_action"] = "ad_channel"
 
     elif data == "adm_ad_list":
         conn = sqlite3.connect(DB_PATH)
@@ -589,16 +670,126 @@ async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         c.execute("SELECT id, title, link_url, active, days, expires_at, clicks FROM ads ORDER BY id DESC LIMIT 20")
         rows = c.fetchall()
         conn.close()
+
         if not rows:
-            text = "📋 لا يوجد إعلانات"
-        else:
-            text = "📋 الإعلانات:\n\n"
-            for r in rows:
-                status = "✅ نشط" if r[3] else "⏸ موقوف"
-                text += f"#{r[0]} {r[1]}\n{status} | {r[6]} نقرة\n🔗 {r[2]}\n\n"
-        await q.message.edit_text(text, reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("🔙 رجوع", callback_data="admin_panel")],
-        ]), disable_web_page_preview=True)
+            await q.message.edit_text(
+                "📋 لا يوجد إعلانات حالياً",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("🔙 رجوع", callback_data="admin_panel")],
+                ])
+            )
+            return
+
+        # Build message
+        BAGHDAD_TZ = timezone(timedelta(hours=3))
+        now = datetime.now(BAGHDAD_TZ)
+
+        text = "📋 الإعلانات الحالية\n\n"
+        buttons = []
+        for r in rows:
+            ad_id = r[0]
+            title = r[1]
+            url = r[2]
+            active = r[3]
+            days = r[4]
+            expires_str = r[5]
+            clicks = r[6]
+
+            # Status
+            try:
+                expires = datetime.fromisoformat(expires_str).astimezone(BAGHDAD_TZ) if expires_str else None
+            except:
+                expires = None
+
+            is_expired = expires and expires < now
+
+            if not active:
+                status = "⏸ موقوف"
+            elif is_expired:
+                status = "⌛ منتهي"
+            else:
+                status = "✅ نشط"
+
+            # Remaining time
+            remaining = ""
+            if expires and not is_expired and active:
+                delta = expires - now
+                total_hours = int(delta.total_seconds() / 3600)
+                if total_hours < 24:
+                    remaining = f" (باقي {total_hours} ساعة)"
+                else:
+                    remaining = f" (باقي {int(delta.days)} يوم)"
+
+            text += f"#{ad_id} — {title}\n"
+            text += f"{status}{remaining}\n"
+            text += f"👁 {clicks} نقرة | 📅 {days} أيام\n\n"
+
+            # Add buttons row for this ad
+            buttons.append([
+                InlineKeyboardButton(f"🗑 حذف #{ad_id}", callback_data=f"adm_ad_del_{ad_id}"),
+                InlineKeyboardButton(f"⏸ {'تفعيل' if not active else 'إيقاف'} #{ad_id}", callback_data=f"adm_ad_tog_{ad_id}"),
+            ])
+
+        buttons.append([InlineKeyboardButton("🔙 رجوع", callback_data="admin_panel")])
+
+        await q.message.edit_text(
+            text,
+            reply_markup=InlineKeyboardMarkup(buttons),
+            disable_web_page_preview=True
+        )
+
+    # ─── Delete Ad ───
+    elif data.startswith("adm_ad_del_"):
+        try:
+            ad_id = int(data.replace("adm_ad_del_", ""))
+        except:
+            await q.answer("خطأ في المعرّف", show_alert=True)
+            return
+
+        # Get ad title for confirmation
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("SELECT title FROM ads WHERE id = ?", (ad_id,))
+        row = c.fetchone()
+
+        if not row:
+            conn.close()
+            await q.answer("الإعلان غير موجود", show_alert=True)
+            return
+
+        ad_title = row[0]
+        c.execute("DELETE FROM ads WHERE id = ?", (ad_id,))
+        conn.commit()
+        conn.close()
+
+        await q.answer(f"✅ تم حذف: {ad_title}", show_alert=True)
+
+        # Reload list
+        # (recursive call removed)
+
+    # ─── Toggle Ad Active ───
+    elif data.startswith("adm_ad_tog_"):
+        try:
+            ad_id = int(data.replace("adm_ad_tog_", ""))
+        except:
+            await q.answer("خطأ", show_alert=True)
+            return
+
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("UPDATE ads SET active = CASE WHEN active = 1 THEN 0 ELSE 1 END WHERE id = ?", (ad_id,))
+        conn.commit()
+
+        c.execute("SELECT active FROM ads WHERE id = ?", (ad_id,))
+        row = c.fetchone()
+        conn.close()
+
+        if row:
+            status = "مفعّل ✅" if row[0] else "موقوف ⏸"
+            await q.answer(f"تم التغيير: {status}", show_alert=True)
+
+        # Reload list
+        # (recursive call removed)
 
 
 async def admin_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -674,35 +865,118 @@ async def admin_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         except:
             await update.message.reply_text("❌ أرسل ID صحيح")
 
-    elif action == "ad_create":
-        try:
-            parts = [p.strip() for p in text.split("|")]
-            if len(parts) < 4:
-                raise ValueError("محتاج 4")
-            title = parts[0]
-            desc = parts[1]
-            url = parts[2]
-            days = int(parts[3])
+    elif action == "ad_channel":
+        context.user_data["ad_channel"] = text
+        context.user_data["admin_action"] = "ad_desc"
+        await update.message.reply_text(
+            f"✅ اسم القناة: {text}\n\n"
+            "🟢 الخطوة 2 من 4\n\n"
+            "أرسل الوصف (نص قصير يظهر تحت الاسم):\n\n"
+            "❌ /cancel للإلغاء"
+        )
 
-            from datetime import timedelta
-            now = datetime.now()
-            expires = (now + timedelta(days=days)).isoformat()
+    elif action == "ad_desc":
+        context.user_data["ad_desc"] = text
+        context.user_data["admin_action"] = "ad_url"
+        await update.message.reply_text(
+            f"✅ الوصف: {text}\n\n"
+            "🟢 الخطوة 3 من 4\n\n"
+            "أرسل رابط القناة / المشروع:\n\n"
+            "مثال: https://t.me/mychannel\n\n"
+            "❌ /cancel للإلغاء"
+        )
 
-            conn = sqlite3.connect(DB_PATH)
-            c = conn.cursor()
-            c.execute("INSERT INTO ads (title, description, image_url, link_url, sponsor, price, active, days, expires_at, created_at) VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?)",
-                (title, desc, '', url, '', 0, days, expires, now.isoformat()))
-            ad_id = c.lastrowid
-            conn.commit()
-            conn.close()
+    elif action == "ad_url":
+        # Validate URL
+        if not (text.startswith("https://t.me/") or text.startswith("http://") or text.startswith("https://")):
             await update.message.reply_text(
-                f"✅ تم إضافة الإعلان #{ad_id}\n📢 {title}\n🔗 {url}\n📅 {days} أيام",
-                reply_markup=admin_menu_kb(),
-                disable_web_page_preview=True
+                "❌ الرابط غير صحيح\n\n"
+                "لازم يبدأ بـ https://t.me/ أو https://\n\n"
+                "جرب مرة ثانية:"
             )
-            context.user_data.pop("admin_action", None)
-        except Exception as e:
-            await update.message.reply_text(f"❌ خطأ: {e}\n\nمثال:\n`قناتي | انضم | https://t.me/mychannel | 7`", parse_mode="Markdown")
+            return
+        context.user_data["ad_url"] = text
+        context.user_data["admin_action"] = "ad_days"
+        await update.message.reply_text(
+            f"✅ الرابط: {text}\n\n"
+            "🟢 الخطوة 4 من 4\n\n"
+            "كم مدة تثبيت الإعلان؟\n\n"
+            "أرسل مثال:\n"
+            "• `5 ساعات`\n"
+            "• `1 يوم`\n"
+            "• `7 أيام`\n"
+            "• `40 يوم`\n\n"
+            "❌ /cancel للإلغاء",
+            parse_mode="Markdown"
+        )
+
+    elif action == "ad_days":
+        # Parse time string
+        import re as _re
+        hours_match = _re.search(r'(\d+)\s*(ساعة|ساعات|ساعه|ساعتين|hour|hours)', text)
+        days_match = _re.search(r'(\d+)\s*(يوم|أيام|ايام|يومان|day|days)', text)
+        
+        if hours_match:
+            value = int(hours_match.group(1))
+            total_days = value / 24.0
+            duration_text = f"{value} ساعة"
+        elif days_match:
+            value = int(days_match.group(1))
+            total_days = float(value)
+            duration_text = f"{value} يوم"
+        else:
+            await update.message.reply_text(
+                "❌ الصيغة غير صحيحة\n\n"
+                "أرسل مثلاً:\n"
+                "• `5 ساعات`\n"
+                "• `1 يوم`\n"
+                "• `7 أيام`\n\n"
+                "جرب مرة ثانية:",
+                parse_mode="Markdown"
+            )
+            return
+        
+        if total_days <= 0:
+            await update.message.reply_text("❌ المدة يجب أن تكون أكبر من صفر")
+            return
+        
+        # Baghdad timezone (UTC+3)
+        BAGHDAD_TZ = timezone(timedelta(hours=3))
+        now = datetime.now(BAGHDAD_TZ)
+        expires = now + timedelta(days=total_days)
+        
+        # Get collected data
+        title = context.user_data.get("ad_channel", "")
+        desc = context.user_data.get("ad_desc", "")
+        url = context.user_data.get("ad_url", "")
+        
+        # Save to DB
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("INSERT INTO ads (title, description, image_url, link_url, sponsor, price, active, days, expires_at, created_at) VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?)",
+            (title, desc, '', url, '', 0, int(total_days) if total_days == int(total_days) else 1, expires.isoformat(), now.isoformat()))
+        ad_id = c.lastrowid
+        conn.commit()
+        conn.close()
+        
+        # Format times for display
+        now_str = format_baghdad_time(now)
+        expires_str = format_baghdad_time(expires)
+        
+        await update.message.reply_text(
+            f"✅ تم إضافة الإعلان #{ad_id}\n\n"
+            f"📢 {title}\n"
+            f"📝 {desc}\n"
+            f"🔗 {url}\n\n"
+            f"⏰ المدة: {duration_text}\n"
+            f"📅 من: {now_str}\n"
+            f"📅 إلى: {expires_str}",
+            reply_markup=admin_menu_kb(),
+            disable_web_page_preview=True
+        )
+        # Clear all ad data
+        for k in ["ad_channel", "ad_desc", "ad_url", "admin_action"]:
+            context.user_data.pop(k, None)
 
 
 async def admin_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
