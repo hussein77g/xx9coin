@@ -344,6 +344,15 @@ h1, h2, h3, h4, h5, h6 {
 .ad-banner-dots{display:flex;justify-content:center;gap:4px;padding:0 0 10px;position:relative;z-index:2}
 .ad-banner-dot{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.2);transition:background .3s}
 .ad-banner-dot.active{background:#FFD60A}
+
+/* ═══════ ENERGY BAR ═══════ */
+.energy-wrap{padding:0 20px 16px}
+.energy-header{display:flex;justify-content:space-between;margin-bottom:8px;font-size:13px;font-weight:900}
+.energy-label{color:#FFD60A}
+.energy-count{color:#7a7a82}
+.energy-track{height:12px;background:#1c1c1e;border-radius:6px;overflow:hidden;position:relative;border:1px solid rgba(255,255,255,.06)}
+.energy-fill{height:100%;background:linear-gradient(90deg,#FFD60A,#FF9500);border-radius:6px;width:100%;transition:width .3s ease;box-shadow:0 0 15px rgba(255,214,10,.5)}
+.energy-fill.low{background:linear-gradient(90deg,#ff453a,#ff9500)}
 </style>
 </head>
 <body>
@@ -381,6 +390,17 @@ h1, h2, h3, h4, h5, h6 {
   </div>
   <div class="ad-banner-dots" id="adBannerDots"></div>
 </div>
+
+  
+  <div class="energy-wrap">
+    <div class="energy-header">
+      <span class="energy-label">⚡ الطاقة</span>
+      <span class="energy-count"><span id="energyNow">500</span>/<span id="energyMax">500</span></span>
+    </div>
+    <div class="energy-track">
+      <div class="energy-fill" id="energyFill"></div>
+    </div>
+  </div>
 
   <div class="coin-area">
     <div class="coin" id="coin">🪙</div>
@@ -709,7 +729,10 @@ var st = {
   taps: parseInt(localStorage.getItem('xx_taps') || '0'),
   wallet: localStorage.getItem('xx_wallet') || '',
   walletShort: localStorage.getItem('xx_wallet_short') || '',
-  sound: localStorage.getItem('xx_sound') !== 'off'
+  sound: localStorage.getItem('xx_sound') !== 'off',
+  energy: parseInt(localStorage.getItem('xx_energy') || '500'),
+  maxEnergy: parseInt(localStorage.getItem('xx_max_energy') || '500'),
+  lastEnergyTick: parseInt(localStorage.getItem('xx_last_energy') || Date.now())
 };
 
 var saveTimer = null;
@@ -718,6 +741,8 @@ function saveLater() {
   saveTimer = setTimeout(function() {
     localStorage.setItem('xx_bal', st.balance.toFixed(4));
     localStorage.setItem('xx_taps', st.taps);
+    localStorage.setItem('xx_energy', st.energy);
+    localStorage.setItem('xx_last_energy', st.lastEnergyTick);
     saveTimer = null;
   }, 800);
 }
@@ -945,8 +970,14 @@ function getPart() {
 //   TAP
 // ═══════════════════════════════════════
 function tap(clientX, clientY) {
+  if (st.energy < 1) {
+    tost('⚡ الطاقة انتهت — انتظر التجديد');
+    return;
+  }
   st.balance += PER_TAP;
   st.taps++;
+  st.energy -= 1;
+  updateEnergyUI();
   $coin.classList.add('pulse');
   setTimeout(function(){ $coin.classList.remove('pulse'); }, 250);
 
@@ -1688,6 +1719,52 @@ setTimeout(function() {
 
 
 window.addEventListener('focus', function() { pullFromServer(); });
+
+
+// ═══════ ENERGY SYSTEM ═══════
+function updateEnergyUI() {
+  var nowEl = document.getElementById('energyNow');
+  var maxEl = document.getElementById('energyMax');
+  var fillEl = document.getElementById('energyFill');
+  if (!nowEl) return;
+  nowEl.textContent = Math.floor(st.energy);
+  maxEl.textContent = st.maxEnergy;
+  var pct = (st.energy / st.maxEnergy) * 100;
+  fillEl.style.width = pct + '%';
+  if (pct < 30) {
+    fillEl.classList.add('low');
+  } else {
+    fillEl.classList.remove('low');
+  }
+}
+
+function regenEnergy() {
+  var now = Date.now();
+  var elapsed = now - st.lastEnergyTick;
+  var interval = 3000; // 3 seconds per +1
+  if (st.energy < st.maxEnergy && elapsed >= interval) {
+    var gained = Math.floor(elapsed / interval);
+    st.energy = Math.min(st.maxEnergy, st.energy + gained);
+    st.lastEnergyTick = now - (elapsed % interval);
+    updateEnergyUI();
+    saveLater();
+  }
+}
+
+// Run regen every second
+setInterval(regenEnergy, 1000);
+
+// Initialize on load
+setTimeout(updateEnergyUI, 500);
+setTimeout(updateEnergyUI, 1500);
+setTimeout(updateEnergyUI, 3000);
+
+// Update in main upd() too
+var _origUpd = upd;
+upd = function() {
+  _origUpd();
+  updateEnergyUI();
+};
 
 document.addEventListener('gesturestart', function(e){ e.preventDefault(); });
 </script>
