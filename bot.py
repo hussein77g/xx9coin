@@ -115,16 +115,23 @@ def verify_telegram(init_data):
     try:
         parsed = dict(parse_qsl(init_data, keep_blank_values=True))
         if "hash" not in parsed:
+            print("VERIFY: no hash in initData")
             return None
         received_hash = parsed.pop("hash")
         data_check = "\n".join(f"{k}={v}" for k, v in sorted(parsed.items()))
-        secret = hashlib.sha256(BOT_TOKEN.encode()).digest()
-        computed = hmac.new(secret, data_check.encode(), hashlib.sha256).hexdigest()
+        
+        # CORRECT Telegram verification
+        secret_key = hmac.new(b"WebAppData", BOT_TOKEN.encode(), hashlib.sha256).digest()
+        computed = hmac.new(secret_key, data_check.encode(), hashlib.sha256).hexdigest()
+        
         if computed != received_hash:
+            print(f"VERIFY: hash mismatch")
             return None
         return json.loads(parsed.get("user", "{}"))
-    except:
+    except Exception as e:
+        print(f"VERIFY error: {e}")
         return None
+
 
 # ═══════════════════════════════════════
 #   API Handler
