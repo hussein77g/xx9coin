@@ -21,7 +21,7 @@ WEBAPP_URL = "https://xx9coin.vercel.app"
 DB_PATH = "xx9.db"
 CHANNEL_ID = -1004448656917
 OWNER_ID = 6432606301
-API_PORT = 8080
+API_PORT = int(os.environ.get("PORT", 8080))
 
 # ═══════════════════════════════════════
 #   قاعدة البيانات
