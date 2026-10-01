@@ -687,6 +687,9 @@ function updateSoundBtn() {
   if (btn) btn.textContent = st.sound ? '🔊' : '🔇';
 }
 
+// Force clear local balance for testing (remove this line later)
+// localStorage.removeItem('xx_bal');
+
 var st = {
   balance: parseFloat(localStorage.getItem('xx_bal') || '0'),  // will be synced from server
   taps: parseInt(localStorage.getItem('xx_taps') || '0'),
@@ -1354,23 +1357,44 @@ async function sendSync() {
   pendingSync = false;
 }
 
+var _firstPullDone = false;
+
 async function pullFromServer() {
-  if (!window.Telegram || !window.Telegram.WebApp || !window.Telegram.WebApp.initData) return;
+  if (!window.Telegram || !window.Telegram.WebApp || !window.Telegram.WebApp.initData) {
+    console.log('pullFromServer: no initData');
+    return;
+  }
   try {
     var res = await fetch(API_URL + '/me', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ initData: window.Telegram.WebApp.initData })
     });
-    if (!res.ok) return;
-    var data = await res.json();
-    console.log('Server balance:', data.balance, 'Local:', st.balance);
-    // ALWAYS take server if it's higher (admin gave coins)
-    if (data.balance && data.balance > st.balance) {
-      st.balance = data.balance;
-      upd();
-      saveLater();
+    if (!res.ok) {
+      console.log('pullFromServer: HTTP ' + res.status);
+      return;
     }
+    var data = await res.json();
+    console.log('SERVER:', data.balance, 'LOCAL:', st.balance, 'FIRST:', !_firstPullDone);
+
+    // On first pull - always take server balance
+    if (!_firstPullDone) {
+      if (data.balance !== undefined && data.balance !== null) {
+        st.balance = data.balance;
+        _firstPullDone = true;
+        upd();
+        saveLater();
+        console.log('Updated to server balance:', data.balance);
+      }
+    } else {
+      // After that, only take server if higher (admin gave coins)
+      if (data.balance && data.balance > st.balance) {
+        st.balance = data.balance;
+        upd();
+        saveLater();
+      }
+    }
+
     if (data.wallet && !st.wallet) {
       st.wallet = data.wallet;
       st.walletShort = data.wallet.slice(0,4) + '...' + data.wallet.slice(-4);
