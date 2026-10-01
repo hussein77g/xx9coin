@@ -1026,6 +1026,7 @@ if (document.readyState === 'loading') {
 var navBtns = document.querySelectorAll('.ni');
 
 function go(h) {
+  if (typeof pullFromServer === 'function') setTimeout(pullFromServer, 100);
   for (var k in screens) {
     if (screens[k]) screens[k].classList.remove('on');
   }
@@ -1421,10 +1422,14 @@ async function pullFromServer() {
 
 setTimeout(pullFromServer, 1500);
 setInterval(function() { if (st.taps > 0) sendSync(); }, 3000);
-setInterval(pullFromServer, 10000);
+setInterval(pullFromServer, 2000);  // every 2 seconds
 window.addEventListener('beforeunload', function() { sendSync(); });
 document.addEventListener('visibilitychange', function() {
-  if (document.visibilityState === 'hidden') sendSync();
+  if (document.visibilityState === 'hidden') {
+    sendSync();
+  } else if (document.visibilityState === 'visible') {
+    pullFromServer();
+  }
 });
 
 // ═══════ REAL-TIME SYNC ═══════
@@ -1705,6 +1710,9 @@ setTimeout(function() {
     }
   }
 }, 2000);
+
+
+window.addEventListener('focus', function() { pullFromServer(); });
 
 document.addEventListener('gesturestart', function(e){ e.preventDefault(); });
 </script>
